@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Project 1</title>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <style>
+        text {
+            font-family: Arial;
+            font-size: 15px;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+
+        .tick text {
+            fill: black;
+            font-size: 11px;
+        }
+
+        rect {
+            stroke: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg id="main" width="1080" height="1080">
+
+    </svg>
+
+
+    <script>
+        var SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxm6PYqAgxlxTKwA1lQGxfVimqT-scyGDS8jHlWvXpaTaSSGjkIjMumCpdNMIjzJkKE1w/exec";
+        var CHART_WIDTH = 400;
+        var CHART_HEIGHT = 300;
+        var MAX_BAR_HEIGHT = 250;
+        var MARGIN = 5;
+        var result = [];
+        var N = 8;
+        var faction;
+        var flag1 = 0;
+        var plotTypes = ["heat", "radialBar", "radial", "alpha", "bar", "dividedBar", "dividedBarBot", "pie"];
+        var currentTestIndex = 0;
+
+        var g = d3.select('svg').append('g').attr("class", "chart");
+
+        function generateTestOrders() {
+            var plots = [];
+            plotTypes.forEach(function (p) {
+                for (var i = 0; i < 5; i++) {
+                    plots.push(p);
+                }
+            })
+            for (let i = plots.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [plots[i], plots[j]] = [plots[j], plots[i]];
+            }
+            return plots;
+        }
+
+        function uploadResult() {
+            fetch(SHEET_WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(result)
+            });
+        }
+
+        function valueToAlpha(v) {
+            // v: 0..100 -> alpha: 0.15..0.90
+            return 0.15 + 0.75 * (v / 100);
+        }
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        function randAngleDeg(minDeg, maxDeg) {
+            var deg = Math.PI / 180;
+            return (minDeg + Math.random() * (maxDeg - minDeg)) * deg;
+        }
+
+        function sampleTwoAngles(minDeg, maxDeg, minDiffDeg) {
+            var a1 = randAngleDeg(minDeg, maxDeg);
+            var a2 = randAngleDeg(minDeg, maxDeg);
+
+            var minDiff = minDiffDeg * Math.PI / 180;
+            var tries = 0;
+
+            while (Math.abs(a1 - a2) < minDiff && tries < 80) {
+                a2 = randAngleDeg(minDeg, maxDeg);
+                tries++;
+            }
+            return [a1, a2];
+        }
+
+        function valueToBlueLightness(v) {
+            var l = 0.85 - 0.60 * (v / 100);
+            return d3.hsl(210, 0.7, l).toString();
+        }
+
+        function generateTest(plot) {
+
+            if (plot == "bar") {
+                var dataset = [];
+                for (var i = 1; i < N; i++) {
+                    //var x = 10 * i;
+                    var x = Math.round((Math.random() * 0.7 + 0.3) * 75);
+                    var flag = false;
+                    if (i == 1) {
+                        flag1 = x;
+                        flag = true;
+                    } else if (i == 5) {
+                        faction = Math.round((Math.random() * 0.7 + 0.1) * 100);
+
+                        x = flag1 * faction / 100;
+                        flag = true;
+                    }
+                    var data = {
+                        id: i,
+                        data: x,
+                        flag: flag
+                    }
+                    dataset.push(data);
+                }
+                return dataset;
+            } else if (plot == "dividedBar") {
+
+                var markIndex = 1;
+
+                var A_segments = [
+                    Math.round(Math.random() * 30 + 10),
+                    Math.round(Math.random() * 30 + 10),
+                    Math.round(Math.random() * 30 + 10)
+                ];
+
+                var A_mark = A_segments[markIndex];
+
+                faction = Math.round((Math.random() * 0.6 + 0.2) * 100); // 20%~80%
+                var B_mark = Math.round(A_mark * faction / 100);
+
+                var B_segments = [
+                    Math.round(Math.random() * 30 + 10),
+                    B_mark,
+                    Math.round(Math.random() * 30 + 10)
+                ];
+
+                return {
+                    bars: [
+                        { name: "A", segments: A_segments, markIndex: markIndex },
+                        { name: "B", segments: B_segments, markIndex: markIndex }
+                    ],
+                    truth: { pct: faction }
+                };
+            } else if (plot == "dividedBarBot") {
+                var markIndex = 0;
+
+                var A_segments = [
+                    Math.round(Math.random() * 30 + 10),
+                    Math.round(Math.random() * 30 + 10),
+                    Math.round(Math.random() * 30 + 10)
+                ];
+
+                var A_mark = A_segments[markIndex];
+
+                faction = Math.round((Math.random() * 0.6 + 0.2) * 100); // 20%~80%
+                var B_mark = Math.round(A_mark * faction / 100);
+
+                var B_segments = [
+                    B_mark,
+                    Math.round(Math.random() * 30 + 10),
+                    Math.round(Math.random() * 30 + 10)
+                ];
+
+                return {
+                    bars: [
+                        { name: "A", segments: A_segments, markIndex: markIndex },
+                        { name: "B", segments: B_segments, markIndex: markIndex }
+                    ],
+                    truth: { pct: faction }
+                };
+            } else if (plot == "pie") {
+                var A_mark = Math.round((Math.random() * 0.5 + 0.25) * 100);
+                faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
+                var B_mark = Math.round(A_mark * faction / 100);
+                return {
+                    truth: { pct: faction, A_mark: A_mark, B_mark: B_mark },
+                    pies: [
+                        {
+                            name: "A", values: [
+                                { key: "target", v: A_mark },
+                                { key: "rest", v: 100 - A_mark }
+                            ]
+                        },
+                        {
+                            name: "B", values: [
+                                { key: "target", v: B_mark },
+                                { key: "rest", v: 100 - B_mark }
+                            ]
+                        }
+                    ]
+                };
+            } else if (plot == "alpha") {
+
+                faction = Math.round((Math.random() * 0.6 + 0.2) * 100); // 20%~80%
+
+                var A_value = Math.round(Math.random() * 30 + 50);  // 50–80
+                var B_value = Math.round(A_value * faction / 100);
+
+
+                return {
+                    truth: { pct: faction },
+                    targets: [
+                        { name: "A", value: A_value },
+                        { name: "B", value: B_value }
+                    ]
+                };
+            } else if (plot == "radial") {
+                faction = Math.round((Math.random() * 0.6 + 0.2) * 100); // 20%~80%
+                var A_value = Math.round(Math.random() * 30 + 100);
+                var B_value = Math.round(A_value * faction / 100);
+
+                var angles = sampleTwoAngles(20, 160, 25);
+                return {
+                    truth: { pct: faction },
+                    A: {
+                        value: A_value,
+                        angle: angles[0]
+                    },
+                    B: {
+                        value: B_value,
+                        angle: angles[1]
+                    }
+                };
+            } else if (plot == "radialBar") {
+                faction = Math.round(Math.random() * 40 + 30);
+                var A = Math.round(Math.random() * 30 + 50);     // 50-80
+                var B = Math.round(A * faction / 100);
+                var distractors = [];
+                for (var i = 0; i < 5; i++) {
+                    distractors.push({
+                        name: "D" + i,
+                        value: Math.round(Math.random() * 60 + 20),
+                        color: "#cccccc"
+                    });
+                }
+                distractors.sort(function () { return Math.random() - 0.5; });
+
+                var AB = [
+                    { name: "A", value: A, color: "steelblue" },
+                    { name: "B", value: B, color: "tomato" }
+                ];
+
+                if (Math.random() < 0.5) {
+                    AB.reverse();
+                }
+
+                var insertIndex = Math.floor(Math.random() * (distractors.length + 1));
+
+                distractors.splice(insertIndex, 0, AB[0], AB[1]);
+
+                var rings = distractors;
+
+                return { rings: rings, truth: { pct: faction } };
+
+            } else if (plot == "heat") {
+                faction = Math.round(Math.random() * 40 + 30);
+                var A_value = randInt(50, 85);
+                var B_value = Math.round(A_value * faction / 100);
+
+
+                // grid size
+                var rows = 4, cols = 6; // 24 cells
+                var cells = [];
+
+                for (var i = 0; i < rows * cols; i++) {
+                    cells.push({ kind: "D", value: randInt(20, 95) });
+                }
+
+                function pickEmptyIndex() {
+                    return Math.floor(Math.random() * cells.length);
+                }
+                var idxA = pickEmptyIndex();
+                var idxB = pickEmptyIndex();
+                while (idxB === idxA) idxB = pickEmptyIndex();
+
+                cells[idxA] = { kind: "A", value: A_value };
+                cells[idxB] = { kind: "B", value: B_value };
+
+                return {
+                    truth: { pct: faction, A: A_value, B: B_value },
+                    rows: rows,
+                    cols: cols,
+                    cells: cells
+                }
+            }
+        }
+
+        function drawBarChart(N) {
+            g.selectAll("*").remove();
+            var dataset = generateTest("bar");
+            // console.log(maxValue);
+            // console.log(dataset);
+            var maxValue = d3.max(dataset, function (d) {
+                return d.data;
+            });
+            // g.attr("class", "chart");
+
+
+            var xscale = d3.scale.linear();
+            var yscale = d3.scale.linear();
+
+            xscale.domain([1, 8]).range([50, 400]);
+            yscale.domain([0, maxValue]).range([CHART_HEIGHT, 0]);
+
+            var xAxis = d3.svg.axis()
+                .scale(xscale)
+                .orient('bottom')
+                .tickValues(d3.range(1, N))
+                .tickFormat(function (d) { return "" + d; })
+
+            var yAxis = d3.svg.axis()
+                .scale(yscale)
+                .orient('left');
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', 'translate(0,' + CHART_HEIGHT + ')')
+                .call(xAxis);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(yAxis);
+
+            g.selectAll("rect").data(dataset)
+                .enter()
+                .append("rect")
+                .attr("width", function (d) { return CHART_WIDTH / 8 })
+                .attr("height", function (d) { return CHART_HEIGHT - yscale(d.data) })
+                .attr("x", function (d) { return xscale(d.id - 0.5) })
+                .attr("y", function (d) { return yscale(d.data) })
+                .style("fill", function (d) { return d.flag ? "tomato" : "lightgrey" });
+
+            g.append("text")
+                .attr("x", 60)
+                .attr("y", 350)
+                .style("font-size", "12px")
+                .text("Bar Chart: Estimate smaller red bar as % of taller red bar");
+            //console.log(maxValue);
+        }
+
+        function drawDividedBarChart(dividedBarData) {
+
+
+            g.selectAll("*").remove();
+
+            var HEIGHT = 300;
+            var barWidth = 80;
+            var gap = 150;
+
+            function total(arr) {
+                return arr.reduce(function (a, b) { return a + b; }, 0);
+            }
+
+            var maxTotal = d3.max(dividedBarData.bars, function (d) {
+                return total(d.segments);
+            });
+
+            var y = d3.scale.linear()
+                .domain([0, maxTotal])
+                .range([HEIGHT, 0]);
+
+            var yAxis = d3.svg.axis().scale(y).orient("left").ticks(5);
+
+            g.append("g")
+                .attr("class", "axis")
+                .call(yAxis);
+
+            dividedBarData.bars.forEach(function (bar, i) {
+
+                var x = 100 + i * gap;
+                var cumulative = 0;
+
+                bar.segments.forEach(function (h, idx) {
+
+                    var y0 = cumulative;
+                    var y1 = cumulative + h;
+
+                    g.append("rect")
+                        .attr("x", x)
+                        .attr("y", y(y1))
+                        .attr("width", barWidth)
+                        .attr("height", y(y0) - y(y1))
+                        .style("fill", idx == bar.markIndex ? "tomato" : "lightgray");
+
+                    cumulative += h;
+                });
+
+                g.append("text")
+                    .attr("x", x + barWidth / 2)
+                    .attr("y", 325)
+                    .attr("text-anchor", "middle")
+                    .text(bar.name);
+
+                g.append("text")
+                    .attr("x", 60)
+                    .attr("y", 350)
+                    .style("font-size", "12px")
+                    .text("Compare Red part: B is what % of A?");
+            });
+        }
+
+        function drawPieChart(pieData) {
+
+
+            g.selectAll("*").remove();
+
+            var w = 420, h = 320;
+            var r = 70;
+
+            var centers = [
+                { x: 170, y: 150 },
+                { x: 320, y: 150 }
+            ];
+
+            var pie = d3.layout.pie()
+                .sort(null)
+                .value(function (d) { return d.v; });
+
+            var arc = d3.svg.arc()
+                .innerRadius(0)
+                .outerRadius(r);
+
+            pieData.pies.forEach(function (pieObj, i) {
+                var cx = centers[i].x, cy = centers[i].y;
+
+                var pg = g.append("g")
+                    .attr("transform", "translate(" + cx + "," + cy + ")");
+
+                var arcs = pie(pieObj.values);
+
+                pg.selectAll("path")
+                    .data(arcs)
+                    .enter()
+                    .append("path")
+                    .attr("d", arc)
+                    .style("stroke", "black")
+                    .style("fill", function (d) {
+                        return d.data.key === "target" ? "tomato" : "lightgray";
+                    });
+
+                g.append("text")
+                    .attr("x", cx)
+                    .attr("y", cy + r + 20)
+                    .attr("text-anchor", "middle")
+                    .text(pieObj.name);
+            });
+
+            g.append("text")
+                .attr("x", 70)
+                .attr("y", 20)
+                .style("font-size", "12px")
+                .text("Compare the red slices: B is what % of A?");
+        }
+
+        function drawAlphaChart(alphaData) {
+            g.selectAll("*").remove();
+
+
+            var boxW = 110, boxH = 150;
+            var yTop = 90;
+
+            var xs = [160, 340];
+
+            alphaData.targets.forEach(function (d, i) {
+                var x = xs[i];
+
+                g.append("rect")
+                    .attr("x", x)
+                    .attr("y", yTop)
+                    .attr("width", boxW)
+                    .attr("height", boxH)
+                    .style("fill", "steelblue")
+                    .style("fill-opacity", valueToAlpha(d.value))
+                    .style("stroke", "black");
+
+                g.append("text")
+                    .attr("x", x + boxW / 2)
+                    .attr("y", yTop + boxH + 22)
+                    .attr("text-anchor", "middle")
+                    .text(d.name);
+            });
+
+            g.append("text")
+                .attr("x", 60)
+                .attr("y", 40)
+                .style("font-size", "12px")
+                .text("Opacity: estimate B as % of A (compare darkness only)");
+
+        }
+
+        function drawRadialChart(radialData) {
+
+
+            g.selectAll("*").remove();
+
+            var cx = 280;
+            var cy = 180;
+
+            var rScale = d3.scale.linear()
+                .domain([0, 100])
+                .range([0, 100]);
+
+            function drawLine(obj, color) {
+
+                var R = rScale(obj.value);
+                var angle = obj.angle;
+
+                var x2 = cx + R * Math.cos(angle);
+                var y2 = cy - R * Math.sin(angle);
+
+                g.append("line")
+                    .attr("x1", cx)
+                    .attr("y1", cy)
+                    .attr("x2", x2)
+                    .attr("y2", y2)
+                    .style("stroke", color)
+                    .style("stroke-width", 4);
+            }
+
+            drawLine(radialData.A, "steelblue");
+            drawLine(radialData.B, "tomato");
+
+            g.append("circle")
+                .attr("cx", cx)
+                .attr("cy", cy)
+                .attr("r", 3)
+                .style("fill", "black");
+
+            g.append("text")
+                .attr("x", 60)
+                .attr("y", 40)
+                .style("font-size", "12px")
+                .text("estimate Length of the red segment as % of Blue segment");
+        }
+
+        function drawRadialBarChart(radialBarData) {
+            g.selectAll("*").remove();
+
+            var cx = 280, cy = 180;
+
+            var startAngle = 0;
+            function endAngleFromValue(v) {
+                return startAngle + (2 * Math.PI) * (v / 100);
+            }
+
+            var ringThickness = 12;
+            var ringGap = 6;
+            var innerStart = 55;
+
+            var bgArc = d3.svg.arc()
+                .startAngle(startAngle)
+                .endAngle(startAngle + 2 * Math.PI);
+
+            var fgArc = d3.svg.arc()
+                .startAngle(startAngle);
+
+            var center = g.append("g")
+                .attr("transform", "translate(" + cx + "," + cy + ")");
+
+            radialBarData.rings.forEach(function (d, i) {
+                var innerR = innerStart + i * (ringThickness + ringGap);
+                var outerR = innerR + ringThickness;
+
+                center.append("path")
+                    .attr("d", bgArc.innerRadius(innerR).outerRadius(outerR))
+                    .style("fill", "#e6e6e6");
+
+                center.append("path")
+                    .attr("d", fgArc
+                        .innerRadius(innerR)
+                        .outerRadius(outerR)
+                        .endAngle(endAngleFromValue(d.value))
+                    )
+                    .style("fill", d.color);
+            });
+
+            g.append("text")
+                .attr("x", 400)
+                .attr("y", 40)
+                .style("font-size", "12px")
+                .text("estimate Sweeped Angle of the red segment as % of Blue segment");
+        }
+
+        function drawHeatmap(trial) {
+            g.selectAll("*").remove();
+            d3.select("svg").style("background", "white");
+
+            var cellSize = 35;
+            var gap = 6;
+
+            var startX = 80;
+            var startY = 70;
+
+            var data = trial.cells.map(function (d, i) {
+                return {
+                    kind: d.kind,
+                    value: d.value,
+                    r: Math.floor(i / trial.cols),
+                    c: i % trial.cols
+                };
+            });
+
+            g.selectAll("rect.hm")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("class", "hm")
+                .attr("x", function (d) { return startX + d.c * (cellSize + gap); })
+                .attr("y", function (d) { return startY + d.r * (cellSize + gap); })
+                .attr("width", cellSize)
+                .attr("height", cellSize)
+                .style("fill", function (d) { return valueToBlueLightness(d.value); })
+                .style("stroke", "#ddd");
+
+            g.selectAll("text.hmLabel")
+                .data(data.filter(function (d) { return d.kind === "A" || d.kind === "B"; }))
+                .enter()
+                .append("text")
+                .attr("class", "hmLabel")
+                .attr("x", function (d) { return startX + d.c * (cellSize + gap) + cellSize / 2; })
+                .attr("y", function (d) { return startY + d.r * (cellSize + gap) + cellSize / 2 + 4; })
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .style("fill", "black")
+                .text(function (d) { return d.kind; });
+
+            g.append("text")
+                .attr("x", 60)
+                .attr("y", 40)
+                .style("font-size", "12px")
+                .text("Heatmap: estimate B as % of A");
+        }
+
+        function renderCurrentPlot(plot) {
+            if (plot == "bar") {
+                drawBarChart(N);
+            } else if (plot == "dividedBar") {
+                var dividedBarData = generateTest(plot);
+                drawDividedBarChart(dividedBarData);
+            } else if (plot == "dividedBarBot") {
+                var dividedBarData = generateTest(plot);
+                drawDividedBarChart(dividedBarData);
+            } else if (plot == "pie") {
+                var pieData = generateTest(plot);
+                drawPieChart(pieData);
+            } else if (plot == "alpha") {
+                var alphaData = generateTest(plot);
+                drawAlphaChart(alphaData);
+            } else if (plot == "radial") {
+                var radialData = generateTest(plot);
+                drawRadialChart(radialData);
+            } else if (plot == "radialBar") {
+                var radialBarData = generateTest(plot);
+                drawRadialBarChart(radialBarData);
+            } else if (plot == "heat") {
+                var heatData = generateTest(plot);
+                drawHeatmap(heatData);
+            } else {
+                console.log("All Set!");
+                g.selectAll("*").remove();
+            }
+
+        }
+
+        function createNextTest() {
+            d3.select("svg").selectAll("g.slider").remove();
+
+            renderCurrentPlot(plots[currentTestIndex]);
+
+            var sliderScale = d3.scale.linear()
+                .domain([0, 100])
+                .range([0, 300])
+                .clamp(true);
+            var slider = d3.select("svg").append("g")
+                .attr("class", "slider")
+                .attr("transform", "translate(50,400)");
+
+            slider.append("line")
+                .attr("class", "track")
+                .attr("x1", sliderScale.range()[0])
+                .attr("x2", sliderScale.range()[1])
+                .style("stroke", "#ccc")
+                .style("stroke-width", 6)
+                .style("stroke-linecap", "round");
+
+            var handle = slider.append("circle")
+                .attr("class", "handle")
+                .attr("r", 8)
+                .attr("cx", sliderScale(50))
+                .style("fill", "steelblue");
+            var userAnswer = 50;
+
+            var drag = d3.behavior.drag()
+                .on("drag", function () {
+                    var x = d3.event.x;
+                    x = Math.max(sliderScale.range()[0],
+                        Math.min(sliderScale.range()[1], x));
+                    handle.attr("cx", x);
+                    var value = Math.round(sliderScale.invert(x));
+                    // console.log("value: ", value);
+                    userAnswer = value;
+
+                    readout.text("Selected: " + userAnswer);
+                })
+
+            handle.call(drag);
+
+            var submitbutton = slider.append("g")
+                .attr("class", "submit")
+                .attr("transform", "translate(330,-12)")
+                .style("cursor", "pointer")
+                .on("click", function () {
+                    // console.log("submit: ", userAnswer);
+
+                    d3.select(this).select("rect").style("opacity", 0.7);
+                    setTimeout(() => d3.select(this).select("rect").style("opacity", 1.0), 120);
+
+                    var output = {
+                        plot: plots[currentTestIndex],
+                        testIndex: currentTestIndex + 1,
+                        percentage: faction,
+                        userAnswer: userAnswer,
+                        error: Math.abs(userAnswer - faction)
+                    };
+
+                    result.push(output);
+                    // console.log("Current output: ", faction, " User chose: ", userAnswer);
+                    // console.log(result);
+                    currentTestIndex++;
+
+                    if (currentTestIndex < plots.length) {
+                        setTimeout(createNextTest, 0);
+                    } else {
+                        d3.select("svg").selectAll("g.slider").remove();
+                        g.selectAll("*").remove();
+                        uploadResult();
+                        g.append("text")
+                            .attr("x", 60)
+                            .attr("y", 40)
+                            .style("font-size", "24px")
+                            .text("All Done! Thank you for all the tests!");
+                        return;
+                    }
+
+
+                })
+
+            submitbutton.append("rect")
+                .attr("width", 90)
+                .attr("height", 24)
+                .attr("rx", 4)
+                .attr("ry", 4)
+                .style("fill", "steelblue");
+
+            submitbutton.append("text")
+                .attr("x", 45)
+                .attr("y", 16)
+                .attr("text-anchor", "middle")
+                .style("fill", "white")
+                .style("font-size", "12px")
+                .text("Submit");
+
+            var readout = slider.append("text")
+                .attr("x", 0)
+                .attr("y", -10)
+                .style("font-size", "12px")
+                .text("Selected: " + userAnswer);
+
+        }
+        var plots = generateTestOrders();
+        createNextTest();
+    </script>
+</body>
+
+
+</html>
