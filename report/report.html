@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Project 1: Visualization Evaluation Study report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            max-width: 900px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 40px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .caption {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+        }
+
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Project 1: Visualization Evaluation Study report</h1>
+    <p><strong>Jiafeng Jin</strong> | CS 526 | Feb 19 2026</p>
+
+    <h2>Introduction</h2>
+    <p>
+        Research in graphical perception has shown that visual encoding choices influence how accurately users interpret
+        quantitative information. Percentage estimation tasks provide a straightforward way to evaluate perceptual
+        accuracy across different visualization designs.
+        Most prior work has focused on comparisons between fundamentally different encoding channels, such as position,
+        angle, or color. In this study, we examine both differences across encoding categories and structural variations
+        within the same encoding type. We investigate whether encoding type remains the dominant factor in estimation
+        accuracy and whether added structural complexity introduces measurable changes in perceptual performance.
+
+    </p>
+
+    <h2>Background</h2>
+    <p>
+        Research on graphical perception has established that visual encoding choices influence how accurately people
+        interpret quantitative information. Cleveland & McGill (1984) have systematically compared different graphical
+        encoding and demonstrated that certain visual types, such as position along common scale, are more accurate than
+        others, including angle, area and colors. They also introduced the log error metric to evaluate estimation
+        accuracy.
+        Building on this work, Heer & Bostock (2010) replicated and extended these studies with large-scale, web-based
+        experiments with extra channels tested. Their results confirmed perceptual differences across encoding types and
+        demonstrated that controlled graphical perception studies can be effectively conducted in online environments.
+        This work provides methodological support for web-based experimental designs such as the one used in the present
+        study.
+        Subsequent research has revisited the angle- and arc-based encoding in greater detail. Kosara & Skau (2016)
+        examined variations of pie charts and related arc-length representations. Their research shows that viewers rely
+        on multiple geometric cues—including central angle, arc length, and area—when making judgments. They also noted
+        that certain radial or arc-based variants may introduce additional perceptual challenges due to geometric
+        distortion or reduced spatial alignment.
+        This study builds on this line of research by evaluating both cross-category encoding differences (e.g. length,
+        angle, color) and structural variations within encoding types. By comparing multiple visualizations using a
+        standardized error metric, this study aims to further clarify how encoding category and structural
+        complexity contribute to perceptual accuracy.
+
+    </p>
+
+    <h2>Methods</h2>
+    <h4>Experimental Design</h4>
+    <p>
+        The study employed a within-subject design in which each participant completed trials across all visualization
+        types. Eight participants took part in the experiment. Each participant completed 40 trials (5 trials × 8
+        visualization types), yielding a total of 320 observations. Trial order was randomized to reduce potential order
+        effects.
+    </p>
+
+    <h4>Visualization Types</h4>
+    <p>
+        The study evaluated eight visualization types, grouped according to their primary encoding channel. Two
+        designs—bar and bottom-aligned divided bar—encode magnitude as position along a common scale, consistent with
+        the classification proposed by Cleveland & McGill.
+        Two additional designs—divided bar without alignment and an oriented line-length comparison—encode magnitude
+        through length but without a shared baseline or alignment, introducing structural variation within the length
+        channel.
+        Two visualizations—pie chart and radial bar chart—represent angular or arc-based encodings in a polar layout.
+        Finally, alpha-based and heat-based visualizations encode magnitude using color intensity rather than spatial
+        position.
+
+    </p>
+
+    <h4>Procedure</h4>
+    <p>
+        In each trial, a visualization displaying a target percentage was shown to the participant. Target percentages
+        were randomly generated within the range of 20% to 80% to avoid extreme values. Participants estimated the
+        percentage using a slider input (0-100), with the numeric value displayed in real time.
+        The experiment was conducted online using a web-based interface, and participants completed the study on their
+        own devices. No time limit was imposed, and response time was not recorded. Only complete trials were included
+        in the analysis.
+
+    </p>
+
+    <h4>Error Metric</h4>
+    <p>
+        Estimation accuracy was measured using the log₂(|error| + 1/8) metric proposed by Cleveland & McGill, where
+        error is defined as the absolute difference between the judged and true percentage.
+    </p>
+
+    <h2>Results</h2>
+
+    <p>
+        Each visualization type included 40 trials (8 participants × 5 trials). Mean log₂ estimation error and 95%
+        confidence intervals were calculated for each visualization type. Figure 1 shows the results.
+    </p>
+    <h4>Position along common scale</h4>
+    <p>
+        Among position-aligned encodings, the standard bar chart exhibited relatively low mean log error (M ≈ 1.94). The
+        bottom-aligned divided bar showed slightly higher error (M ≈ 2.20), though both remained within the lower range
+        compared to other visualization types.
+    </p>
+    <h4>Length</h4>
+    <p>
+        The length-based encodings without shared alignment showed higher mean log error. The oriented line-length
+        design (M ≈ 2.37) and the non-aligned divided bar (M ≈ 2.50) both exceeded the baseline-aligned variants.
+    </p>
+    <h4>Angle</h4>
+    <p>
+        Angular encodings also exhibited relatively low mean log error. The pie chart yielded the lowest mean log error
+        (M ≈ 1.60), while the
+        radial bar chart also showed relatively low error (M ≈ 1.87), comparable to the baseline-aligned bar chart.
+    </p>
+    <h4>Color</h4>
+    <p>
+        Color-based encodings produced the highest mean log error. Both alpha-based (M ≈ 3.26) and heat-based (M ≈ 3.40)
+        visualizations showed substantially higher error compared to spatial encodings.
+    </p>
+    <p>
+        Confidence intervals overlapped across several visualization types, particularly among spatial encodings.
+    </p>
+
+    <img src="bar_log_error.png" alt="Mean log error bar chart">
+    <div class="caption">
+        Figure 1. Mean log₂ error with 95% confidence intervals for each visualization type.
+    </div>
+
+    <img src="dot_log_error.png" alt="Dot plot of log error">
+    <div class="caption">
+        Figure 2. Dot plot representation of mean log₂ error with 95% confidence intervals.
+    </div>
+
+
+    <table>
+        <tr>
+            <th>Visualization</th>
+            <th>Mean Log Error</th>
+            <th>CI Lower</th>
+            <th>CI Upper</th>
+        </tr>
+        <tr>
+            <td>Bar</td>
+            <td>1.94</td>
+            <td>1.44</td>
+            <td>2.43</td>
+        </tr>
+        <tr>
+            <td>Bottom-Aligned Divided Bar</td>
+            <td>2.20</td>
+            <td>1.76</td>
+            <td>2.63</td>
+        </tr>
+        <tr>
+            <td>Divided Bar without alignment</td>
+            <td>2.50</td>
+            <td>2.13</td>
+            <td>2.86</td>
+        </tr>
+        <tr>
+            <td>Oriented Line-Length</td>
+            <td>2.37</td>
+            <td>1.82</td>
+            <td>2.91</td>
+        </tr>
+        <tr>
+            <td>Pie</td>
+            <td>1.60</td>
+            <td>0.90</td>
+            <td>2.30</td>
+        </tr>
+        <tr>
+            <td>Radial Bar</td>
+            <td>1.87</td>
+            <td>1.33</td>
+            <td>2.41</td>
+        </tr>
+        <tr>
+            <td>Alpha</td>
+            <td>3.26</td>
+            <td>2.67</td>
+            <td>3.86</td>
+        </tr>
+        <tr>
+            <td>Heat Map</td>
+            <td>3.40</td>
+            <td>2.87</td>
+            <td>3.92</td>
+        </tr>
+    </table>
+
+    <h2>Discussion</h2>
+    <p>
+        Overall, estimation accuracy varied across the four encoding categories tested: position along a common scale,
+        length without a common scale, angle/arc-based encodings, and color-based encodings. In addition to comparing
+        these categories, we introduced more visually complex variants within categories to examine how much additional
+        visual overhead affects accuracy.
+    </p>
+    <p>
+        Position-aligned encodings correspond to the strongest encoding types identified by Cleveland & McGill and
+        showed relatively low estimation error. Within this category, the standard bar chart exhibited slightly lower
+        mean error than the bottom-aligned divided bar. This difference may reflect the segmentation in the divided bar,
+        which introduces minor visual overhead while preserving the shared baseline.
+    </p>
+    <p>
+        Length-based encodings without a shared common scale showed higher estimation error compared to position-aligned
+        encodings. Without a common linear reference, users may find it more difficult to accurately perceive and
+        compare magnitudes. The oriented line-length design performed slightly better than the non-aligned divided bar,
+        possibly because the shared origin provides a partial alignment cue despite the change in orientation. However,
+        the confidence intervals overlap, suggesting that this difference may not be consistent across all participants.
+    </p>
+    <p>
+        Angular encodings showed a somewhat surprising pattern in this study. Both the pie chart and the radial bar
+        chart produced mean log error values comparable to, and in some cases slightly lower than, the baseline-aligned
+        bar chart. However, these encodings also exhibited relatively high standard deviations, suggesting greater
+        variability across participants. Therefore, these results should not be interpreted as definitive evidence that
+        angular encodings outperform position-based encodings.
+    </p>
+    <p>
+        Consistent with findings from Kosara and Skau, the pie chart did not perform as poorly as commonly assumed. The
+        radial bar chart, however, showed slightly higher error than the regular pie chart. Because radial bars rely on
+        varying arc lengths and polar geometry, these structural differences may introduce additional perceptual
+        challenges when interpreting magnitude.
+    </p>
+    <p>
+        Color-based encodings produced the highest estimation error among all categories. Both alpha-based and
+        heat-based visualizations showed substantially larger mean log error compared to spatial encodings. In the
+        absence of a clear spatial reference, users may find it difficult to translate variations in color intensity
+        into precise numerical estimates.
+    </p>
+    <p>
+        The heat-based visualization, in particular, appeared to introduce additional visual interference due to
+        surrounding color variation. Because human perception of color intensity is not linearly mapped to numerical
+        magnitude, these encodings may inherently lead to larger estimation errors.
+    </p>
+    <p>
+        This study has several limitations. The sample size was relatively small (N = 8), and each visualization type
+        included only five trials per participant. Participants completed the experiment on their own devices, and no
+        time constraints were imposed, which may have introduced variability in viewing conditions and decision
+        strategies. Therefore, the findings should be interpreted as exploratory rather than definitive.
+    </p>
+
+    <h2>Conclusion</h2>
+    <p>
+        This study examined how different encoding categories influence perceptual accuracy in percentage estimation
+        tasks. Overall, position-based encodings with a shared common scale showed relatively low error, while
+        color-based encodings produced the highest error. Length-based encodings without shared alignment demonstrated
+        reduced accuracy compared to baseline-aligned designs, suggesting that structural alignment plays an important
+        role in perceptual judgment. Angular encodings performed competitively, though with greater variability across
+        participants. While these findings broadly align with prior graphical perception research, the limited sample
+        size and uncontrolled viewing conditions indicate that the results should be interpreted cautiously. Future work
+        with larger participant samples and more controlled experimental settings could further clarify how encoding
+        category and structural variation jointly affect estimation accuracy.
+    </p>
+
+</body>
+
+</html>
