@@ -1,833 +1,322 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <title>Project 1</title>
-  <script src="https://d3js.org/d3.v3.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Project 1: Visualization Evaluation Study report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            max-width: 900px;
+        }
 
-  <style>
-    :root {
-      --bg: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --axis: #111827;
-      --grid: #e5e7eb;
-      --card: #f9fafb;
-      --blue: #2563eb;
-      --red: #ef4444;
-      --neutral: #d1d5db;
-    }
+        h1 {
+            text-align: center;
+        }
 
-    body {
-      margin: 0;
-      background: var(--bg);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-    }
+        h2 {
+            margin-top: 40px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
 
-    svg#main {
-      display: block;
-      margin: 24px auto;
-      background: var(--card);
-      border: 1px solid var(--grid);
-      border-radius: 16px;
-    }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
 
-    text {
-      font-size: 12px;
-      fill: var(--text);
-    }
+        .caption {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 30px;
+        }
 
-    .title {
-      font-size: 16px;
-      font-weight: 700;
-    }
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
 
-    .subtitle {
-      font-size: 12px;
-      fill: var(--muted);
-    }
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+        }
 
-    .axis path,
-    .axis line {
-      fill: none;
-      stroke: var(--axis);
-      shape-rendering: crispEdges;
-      opacity: 0.6;
-    }
-
-    .tick text {
-      fill: var(--muted);
-      font-size: 11px;
-    }
-
-    .track {
-      stroke: var(--grid);
-      stroke-width: 8;
-      stroke-linecap: round;
-    }
-
-    .handle {
-      fill: var(--blue);
-    }
-
-    .btn rect {
-      fill: var(--blue);
-    }
-
-    .btn text {
-      fill: white;
-      font-weight: 600;
-    }
-
-    .hint {
-      fill: var(--muted);
-      font-size: 11px;
-    }
-
-    .hmLabel {
-      font-weight: 700;
-    }
-  </style>
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
 </head>
 
 <body>
 
-  <svg id="main" width="900" height="650"></svg>
-
-  <script>
-
-    var SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxm6PYqAgxlxTKwA1lQGxfVimqT-scyGDS8jHlWvXpaTaSSGjkIjMumCpdNMIjzJkKE1w/exec";
-    var CHART_WIDTH = 400;
-    var CHART_HEIGHT = 300;
-    var MAX_BAR_HEIGHT = 250;
-    var MARGIN = 5;
-    var result = [];
-    var N = 8;
-    var faction;
-    var flag1 = 0;
-    var plotTypes = ["heat", "radialBar", "radial", "alpha", "bar", "dividedBar", "dividedBarBot", "pie"];
-    var currentTestIndex = 0;
-
-    var COLORS = {
-      A: "#2563eb",
-      B: "#ef4444",
-      neutral: "#d1d5db"
-    };
-
-    var svg = d3.select("#main");
-    var SVG_W = 900, SVG_H = 650;
-
-    var UI = {
-      pad: 26,
-
-      headerX: 60,
-      headerY: 40,
-
-      plotW: 720,
-      plotH: 360,
-      plotY: 110,
-      plotX: (SVG_W - 720) / 2,     
-      sliderW: 360,
-      sliderX: (SVG_W - 360 - 130) / 2, 
-      sliderY: 545
-    };
-
-    var gHeader = svg.append("g").attr("class", "layer header");
-    var gPlot = svg.append("g").attr("class", "layer plot")
-      .attr("transform", "translate(" + UI.plotX + "," + UI.plotY + ")");
-    var gUI = svg.append("g").attr("class", "layer ui");
-
-    function clearHeader() { gHeader.selectAll("*").remove(); }
-    function clearPlot() { gPlot.selectAll("*").remove(); }
-    function clearUI() { gUI.selectAll("*").remove(); }
-
-    svg.append("defs").append("clipPath")
-      .attr("id", "plotClip")
-      .append("rect")
-      .attr("x", -80)                 
-      .attr("y", 0)
-      .attr("width", UI.plotW + 160)  
-      .attr("height", UI.plotH);
-
-
-    gPlot.attr("clip-path", "url(#plotClip)");
-
-    var INSTRUCTIONS = {
-      bar: "Estimate: red (smaller) as % of red (larger).",
-      dividedBar: "Estimate: B's red segment as % of A's red segment.",
-      dividedBarBot: "Estimate: B's red segment as % of A's red segment.",
-      pie: "Estimate the central angle of the red slice in B as a percentage of the red slice in A.",
-      alpha: "Estimate: B's darkness as % of A's (ignore size).",
-      radial: "Estimate: red line length as % of blue line length.",
-      radialBar: "Estimate: red arc sweep as % of blue arc sweep.",
-      heat: "Estimate: B's color intensity as % of A's."
-    };
-
-    function drawHeader() {
-      clearHeader();
-      gHeader.attr("transform", "translate(" + UI.plotX + "," + UI.pad + ")");
-
-      gHeader.append("text")
-        .attr("class", "title")
-        .attr("x", 0).attr("y", 18)
-        .text("Perception Study");
-
-      gHeader.append("text")
-        .attr("class", "subtitle")
-        .attr("x", 0).attr("y", 42)
-        .text("Test " + (currentTestIndex + 1) + " / " + plots.length + " - move the slider and submit");
-
-      var prog = currentTestIndex / plots.length;
-      var w = 260, h = 8, x = 0, y = 56;
-
-      gHeader.append("rect")
-        .attr("x", x).attr("y", y)
-        .attr("width", w).attr("height", h)
-        .attr("rx", 4).attr("ry", 4)
-        .style("fill", "#e5e7eb");
-
-      gHeader.append("rect")
-        .attr("x", x).attr("y", y)
-        .attr("width", Math.max(0, w * prog)).attr("height", h)
-        .attr("rx", 4).attr("ry", 4)
-        .style("fill", COLORS.A);
-    }
-
-    function drawInstruction(plot) {
-      gPlot.selectAll("text.instruction").remove();
-      gPlot.append("text")
-        .attr("class", "subtitle instruction")
-        .attr("x", 0)
-        .attr("y", 18)
-        .text(INSTRUCTIONS[plot] || "");
-    }
-
-    function uploadResult() {
-      fetch(SHEET_WEBAPP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(result)
-      });
-    }
-
-    function generateTestOrders() {
-      var plots = [];
-      plotTypes.forEach(function (p) {
-        for (var i = 0; i < 5; i++) plots.push(p);
-      });
-      for (let i = plots.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
-        [plots[i], plots[j]] = [plots[j], plots[i]];
-      }
-      return plots;
-    }
-
-    function valueToAlpha(v) { return 0.15 + 0.75 * (v / 100); }
-    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-    function randAngleDeg(minDeg, maxDeg) {
-      var deg = Math.PI / 180;
-      return (minDeg + Math.random() * (maxDeg - minDeg)) * deg;
-    }
-    function sampleTwoAngles(minDeg, maxDeg, minDiffDeg) {
-      var a1 = randAngleDeg(minDeg, maxDeg);
-      var a2 = randAngleDeg(minDeg, maxDeg);
-      var minDiff = minDiffDeg * Math.PI / 180;
-      var tries = 0;
-      while (Math.abs(a1 - a2) < minDiff && tries < 80) {
-        a2 = randAngleDeg(minDeg, maxDeg);
-        tries++;
-      }
-      return [a1, a2];
-    }
-    function valueToBlueLightness(v) {
-      var l = 0.85 - 0.60 * (v / 100);
-      return d3.hsl(210, 0.7, l).toString();
-    }
-
-    function generateTest(plot) {
-      if (plot == "bar") {
-        var dataset = [];
-        for (var i = 1; i < N; i++) {
-          var x = Math.round((Math.random() * 0.7 + 0.3) * 75);
-          var flag = false;
-          if (i == 1) {
-            flag1 = x;
-            flag = true;
-          } else if (i == 5) {
-            faction = Math.round((Math.random() * 0.7 + 0.1) * 100);
-            x = flag1 * faction / 100;
-            flag = true;
-          }
-          dataset.push({ id: i, data: x, flag: flag });
-        }
-        return dataset;
-
-      } else if (plot == "dividedBar") {
-        var markIndex = 1;
-        var A_segments = [
-          Math.round(Math.random() * 30 + 10),
-          Math.round(Math.random() * 30 + 10),
-          Math.round(Math.random() * 30 + 10)
-        ];
-        var A_mark = A_segments[markIndex];
-        faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
-        var B_mark = Math.round(A_mark * faction / 100);
-        var B_segments = [
-          Math.round(Math.random() * 30 + 10),
-          B_mark,
-          Math.round(Math.random() * 30 + 10)
-        ];
-        return {
-          bars: [
-            { name: "A", segments: A_segments, markIndex: markIndex },
-            { name: "B", segments: B_segments, markIndex: markIndex }
-          ],
-          truth: { pct: faction }
-        };
-
-      } else if (plot == "dividedBarBot") {
-        var markIndex2 = 0;
-        var A_segments2 = [
-          Math.round(Math.random() * 30 + 10),
-          Math.round(Math.random() * 30 + 10),
-          Math.round(Math.random() * 30 + 10)
-        ];
-        var A_mark2 = A_segments2[markIndex2];
-        faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
-        var B_mark2 = Math.round(A_mark2 * faction / 100);
-        var B_segments2 = [
-          B_mark2,
-          Math.round(Math.random() * 30 + 10),
-          Math.round(Math.random() * 30 + 10)
-        ];
-        return {
-          bars: [
-            { name: "A", segments: A_segments2, markIndex: markIndex2 },
-            { name: "B", segments: B_segments2, markIndex: markIndex2 }
-          ],
-          truth: { pct: faction }
-        };
-
-      } else if (plot == "pie") {
-        var A_mark3 = Math.round((Math.random() * 0.5 + 0.25) * 100);
-        faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
-        var B_mark3 = Math.round(A_mark3 * faction / 100);
-        return {
-          truth: { pct: faction, A_mark: A_mark3, B_mark: B_mark3 },
-          pies: [
-            { name: "A", values: [{ key: "target", v: A_mark3 }, { key: "rest", v: 100 - A_mark3 }] },
-            { name: "B", values: [{ key: "target", v: B_mark3 }, { key: "rest", v: 100 - B_mark3 }] }
-          ]
-        };
-
-      } else if (plot == "alpha") {
-        faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
-        var A_value = Math.round(Math.random() * 30 + 50);
-        var B_value = Math.round(A_value * faction / 100);
-        return {
-          truth: { pct: faction },
-          targets: [
-            { name: "A", value: A_value },
-            { name: "B", value: B_value }
-          ]
-        };
-
-      } else if (plot == "radial") {
-        faction = Math.round((Math.random() * 0.6 + 0.2) * 100);
-        var A_value2 = Math.round(Math.random() * 30 + 100);
-        var B_value2 = Math.round(A_value2 * faction / 100);
-        var angles = sampleTwoAngles(20, 160, 25);
-        return {
-          truth: { pct: faction },
-          A: { value: A_value2, angle: angles[0] },
-          B: { value: B_value2, angle: angles[1] }
-        };
-
-      } else if (plot == "radialBar") {
-        faction = Math.round(Math.random() * 40 + 30);
-        var A4 = Math.round(Math.random() * 30 + 50);
-        var B4 = Math.round(A4 * faction / 100);
-
-        var distractors = [];
-        for (var i2 = 0; i2 < 5; i2++) {
-          distractors.push({
-            name: "D" + i2,
-            value: Math.round(Math.random() * 60 + 20),
-            color: "#cccccc"
-          });
-        }
-        distractors.sort(function () { return Math.random() - 0.5; });
-
-        var AB = [
-          { name: "A", value: A4, color: COLORS.A },
-          { name: "B", value: B4, color: COLORS.B }
-        ];
-        if (Math.random() < 0.5) AB.reverse();
-
-        var insertIndex = Math.floor(Math.random() * (distractors.length + 1));
-        distractors.splice(insertIndex, 0, AB[0], AB[1]);
-
-        return { rings: distractors, truth: { pct: faction } };
-
-      } else if (plot == "heat") {
-        faction = Math.round(Math.random() * 40 + 30);
-        var A_value5 = randInt(50, 85);
-        var B_value5 = Math.round(A_value5 * faction / 100);
-        var rows = 4, cols = 6;
-        var cells = [];
-        for (var k = 0; k < rows * cols; k++) {
-          cells.push({ kind: "D", value: randInt(20, 95) });
-        }
-        function pickEmptyIndex() { return Math.floor(Math.random() * cells.length); }
-        var idxA = pickEmptyIndex();
-        var idxB = pickEmptyIndex();
-        while (idxB === idxA) idxB = pickEmptyIndex();
-        cells[idxA] = { kind: "A", value: A_value5 };
-        cells[idxB] = { kind: "B", value: B_value5 };
-        return { truth: { pct: faction, A: A_value5, B: B_value5 }, rows: rows, cols: cols, cells: cells };
-      }
-    }
-
-    function drawBarChart(N) {
-      clearPlot();
-      var dataset = generateTest("bar");
-      var maxValue = d3.max(dataset, function (d) { return d.data; });
-
-      var paddingL = 48;
-      var paddingB = 40;
-      var topPad = 34; 
-
-      var barW = (UI.plotW - paddingL - 24) / 8;
-
-      var xscale = d3.scale.linear()
-        .domain([1, 8])
-        .range([paddingL + barW / 2, UI.plotW - 12 - barW / 2]);
-
-      var yscale = d3.scale.linear()
-        .domain([0, maxValue])
-        .range([UI.plotH - paddingB, topPad]);
-
-
-      var xAxis = d3.svg.axis()
-        .scale(xscale)
-        .orient('bottom')
-        .tickValues(d3.range(1, N))
-        .tickFormat(function (d) { return "" + d; });
-
-      var yAxis = d3.svg.axis()
-        .scale(yscale)
-        .orient('left')
-        .ticks(5);
-
-      gPlot.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(0,' + (UI.plotH - paddingB) + ')')
-        .call(xAxis);
-
-      gPlot.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(' + paddingL + ',0)')
-        .call(yAxis);
-
-
-
-      gPlot.selectAll("rect.bar").data(dataset)
-        .enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("width", barW)
-        .attr("height", function (d) { return (UI.plotH - paddingB) - yscale(d.data); })
-        .attr("x", function (d) { return xscale(d.id) - barW / 2; })
-        .attr("y", function (d) { return yscale(d.data); })
-        .style("fill", function (d) { return d.flag ? COLORS.B : COLORS.neutral; });
-    }
-
-    function drawDividedBarChart(dividedBarData) {
-      clearPlot();
-
-      var topPad = 34;
-      var bottomPad = 46;
-      var HEIGHT = UI.plotH - topPad - bottomPad;
-      var barWidth = 90;
-      var gap = 220;
-
-      function total(arr) { return arr.reduce(function (a, b) { return a + b; }, 0); }
-      var maxTotal = d3.max(dividedBarData.bars, function (d) { return total(d.segments); });
-
-      var y = d3.scale.linear()
-        .domain([0, maxTotal])
-        .range([topPad + HEIGHT, topPad]);
-
-      var yAxis = d3.svg.axis().scale(y).orient("left").ticks(5);
-
-      gPlot.append("g")
-        .attr("class", "axis")
-        .attr("transform", "translate(48,0)")
-        .call(yAxis);
-
-      var startX = 180;
-
-      dividedBarData.bars.forEach(function (bar, i) {
-        var x = startX + i * gap;
-        var cumulative = 0;
-
-        bar.segments.forEach(function (h, idx) {
-          var y0 = cumulative;
-          var y1 = cumulative + h;
-
-          gPlot.append("rect")
-            .attr("x", x)
-            .attr("y", y(y1))
-            .attr("width", barWidth)
-            .attr("height", y(y0) - y(y1))
-            .style("fill", idx == bar.markIndex ? COLORS.B : COLORS.neutral);
-
-          cumulative += h;
-        });
-
-        gPlot.append("text")
-          .attr("x", x + barWidth / 2)
-          .attr("y", UI.plotH - 16)
-          .attr("text-anchor", "middle")
-          .text(bar.name);
-      });
-    }
-
-    function drawPieChart(pieData) {
-      clearPlot();
-
-      var topPad = 34;
-      var r = 86;
-
-      var centers = [
-        { x: UI.plotW * 0.36, y: UI.plotH * 0.55 },
-        { x: UI.plotW * 0.64, y: UI.plotH * 0.55 }
-      ];
-
-      var pie = d3.layout.pie().sort(null).value(function (d) { return d.v; });
-      var arc = d3.svg.arc().innerRadius(0).outerRadius(r);
-
-      pieData.pies.forEach(function (pieObj, i) {
-        var cx = centers[i].x, cy = centers[i].y;
-        var pg = gPlot.append("g").attr("transform", "translate(" + cx + "," + cy + ")");
-
-        var arcs = pie(pieObj.values);
-
-        pg.selectAll("path")
-          .data(arcs)
-          .enter()
-          .append("path")
-          .attr("d", arc)
-          .style("stroke", "white")
-          .style("stroke-width", 2)
-          .style("fill", function (d) {
-            return d.data.key === "target" ? COLORS.B : COLORS.neutral;
-          });
-
-        gPlot.append("text")
-          .attr("x", cx)
-          .attr("y", cy + r + 26)
-          .attr("text-anchor", "middle")
-          .text(pieObj.name);
-      });
-    }
-
-    function drawAlphaChart(alphaData) {
-      clearPlot();
-
-      var topPad = 34;
-      var boxW = 140, boxH = 190;
-      var yTop = (UI.plotH - boxH) / 2;
-
-      var xs = [UI.plotW * 0.34 - boxW / 2, UI.plotW * 0.66 - boxW / 2];
-
-      alphaData.targets.forEach(function (d, i) {
-        var x = xs[i];
-
-        gPlot.append("rect")
-          .attr("x", x)
-          .attr("y", yTop)
-          .attr("width", boxW)
-          .attr("height", boxH)
-          .style("fill", COLORS.A)
-          .style("fill-opacity", valueToAlpha(d.value))
-          .style("stroke", "#111827")
-          .style("stroke-width", 1);
-
-        gPlot.append("text")
-          .attr("x", x + boxW / 2)
-          .attr("y", yTop + boxH + 26)
-          .attr("text-anchor", "middle")
-          .text(d.name);
-      });
-    }
-
-    function drawRadialChart(radialData) {
-      clearPlot();
-
-      var cx = UI.plotW / 2;
-      var cy = UI.plotH / 2 + 10;
-
-      var rScale = d3.scale.linear()
-        .domain([0, 140])    
-        .range([0, 150]);
-
-      function drawLine(obj, color) {
-        var R = rScale(obj.value);
-        var angle = obj.angle;
-
-        var x2 = cx + R * Math.cos(angle);
-        var y2 = cy - R * Math.sin(angle);
-
-        gPlot.append("line")
-          .attr("x1", cx).attr("y1", cy)
-          .attr("x2", x2).attr("y2", y2)
-          .style("stroke", color)
-          .style("stroke-width", 5)
-          .style("stroke-linecap", "round");
-      }
-
-      drawLine(radialData.A, COLORS.A);
-      drawLine(radialData.B, COLORS.B);
-
-      gPlot.append("circle")
-        .attr("cx", cx).attr("cy", cy)
-        .attr("r", 3.5)
-        .style("fill", "#111827");
-    }
-
-    function drawRadialBarChart(radialBarData) {
-      clearPlot();
-
-      var cx = UI.plotW / 2;
-      var cy = UI.plotH / 2 + 10;
-
-      var startAngle = 0;
-      function endAngleFromValue(v) {
-        return startAngle + (2 * Math.PI) * (v / 100);
-      }
-
-      var n = radialBarData.rings.length;
-
-      var maxOuter = Math.min(UI.plotW, UI.plotH) / 2 - 14;
-
-      var ringGap = 6;
-      var ringThickness = Math.floor((maxOuter - 28 - (n - 1) * ringGap) / n);
-      ringThickness = Math.max(8, Math.min(14, ringThickness));
-      var innerStart = maxOuter - (n * ringThickness + (n - 1) * ringGap);
-
-      var bgArc = d3.svg.arc()
-        .startAngle(startAngle)
-        .endAngle(startAngle + 2 * Math.PI);
-
-      var fgArc = d3.svg.arc()
-        .startAngle(startAngle);
-
-      var center = gPlot.append("g")
-        .attr("transform", "translate(" + cx + "," + cy + ")");
-
-      radialBarData.rings.forEach(function (d, i) {
-        var innerR = innerStart + i * (ringThickness + ringGap);
-        var outerR = innerR + ringThickness;
-
-        center.append("path")
-          .attr("d", bgArc.innerRadius(innerR).outerRadius(outerR))
-          .style("fill", "#e6e6e6");
-
-        center.append("path")
-          .attr("d", fgArc
-            .innerRadius(innerR)
-            .outerRadius(outerR)
-            .endAngle(endAngleFromValue(d.value))
-          )
-          .style("fill", d.color);
-      });
-    }
-
-
-    function drawHeatmap(trial) {
-      clearPlot();
-
-      var topPad = 34;
-      var usableH = UI.plotH - topPad - 20;
-
-      var cellSize = 46;
-      var gap = 10;
-
-      var gridW = trial.cols * cellSize + (trial.cols - 1) * gap;
-      var gridH = trial.rows * cellSize + (trial.rows - 1) * gap;
-
-      var startX = (UI.plotW - gridW) / 2;
-      var startY = topPad + (usableH - gridH) / 2;
-
-      var data = trial.cells.map(function (d, i) {
-        return {
-          kind: d.kind,
-          value: d.value,
-          r: Math.floor(i / trial.cols),
-          c: i % trial.cols
-        };
-      });
-
-      gPlot.selectAll("rect.hm")
-        .data(data)
-        .enter()
-        .append("rect")
-        .attr("class", "hm")
-        .attr("x", function (d) { return startX + d.c * (cellSize + gap); })
-        .attr("y", function (d) { return startY + d.r * (cellSize + gap); })
-        .attr("width", cellSize)
-        .attr("height", cellSize)
-        .style("fill", function (d) { return valueToBlueLightness(d.value); })
-        .style("stroke", "white")
-        .style("stroke-width", 2);
-
-      gPlot.selectAll("text.hmLabel")
-        .data(data.filter(function (d) { return d.kind === "A" || d.kind === "B"; }))
-        .enter()
-        .append("text")
-        .attr("class", "hmLabel")
-        .attr("x", function (d) { return startX + d.c * (cellSize + gap) + cellSize / 2; })
-        .attr("y", function (d) { return startY + d.r * (cellSize + gap) + cellSize / 2 + 5; })
-        .attr("text-anchor", "middle")
-        .style("font-size", "14px")
-        .style("fill", "#111827")
-        .text(function (d) { return d.kind; });
-    }
-
-    function renderCurrentPlot(plot) {
-
-
-      if (plot == "bar") {
-        drawBarChart(N);
-      } else if (plot == "dividedBar") {
-        drawDividedBarChart(generateTest(plot));
-      } else if (plot == "dividedBarBot") {
-        drawDividedBarChart(generateTest(plot));
-      } else if (plot == "pie") {
-        drawPieChart(generateTest(plot));
-      } else if (plot == "alpha") {
-        drawAlphaChart(generateTest(plot));
-      } else if (plot == "radial") {
-        drawRadialChart(generateTest(plot));
-      } else if (plot == "radialBar") {
-        drawRadialBarChart(generateTest(plot));
-      } else if (plot == "heat") {
-        drawHeatmap(generateTest(plot));
-      } else {
-        clearPlot();
-      }
-      drawInstruction(plot);
-    }
-
-    function createNextTest() {
-      drawHeader();
-      clearPlot();
-      clearUI();
-
-      renderCurrentPlot(plots[currentTestIndex]);
-
-      var sliderScale = d3.scale.linear()
-        .domain([0, 100])
-        .range([0, UI.sliderW])
-        .clamp(true);
-
-      var slider = gUI.append("g")
-        .attr("class", "slider")
-        .attr("transform", "translate(" + UI.sliderX + "," + UI.sliderY + ")");
-
-      slider.append("text")
-        .attr("class", "subtitle")
-        .attr("x", 0).attr("y", -18)
-        .text("Selected: 50");
-
-      slider.append("line")
-        .attr("class", "track")
-        .attr("x1", sliderScale.range()[0])
-        .attr("x2", sliderScale.range()[1]);
-
-      [0, 50, 100].forEach(function (v) {
-        slider.append("text")
-          .attr("class", "hint")
-          .attr("x", sliderScale(v))
-          .attr("y", 22)
-          .attr("text-anchor", "middle")
-          .text(v);
-      });
-
-      var handle = slider.append("circle")
-        .attr("class", "handle")
-        .attr("r", 8)
-        .attr("cx", sliderScale(50));
-
-      var userAnswer = 50;
-      var readout = slider.select("text.subtitle");
-
-      var drag = d3.behavior.drag()
-        .on("drag", function () {
-          var x = d3.event.x;
-          x = Math.max(sliderScale.range()[0], Math.min(sliderScale.range()[1], x));
-          handle.attr("cx", x);
-          userAnswer = Math.round(sliderScale.invert(x));
-          readout.text("Selected: " + userAnswer);
-        });
-
-      handle.call(drag);
-
-      var submitbutton = slider.append("g")
-        .attr("class", "btn")
-        .attr("transform", "translate(" + (UI.sliderW + 40) + ", -16)")
-        .style("cursor", "pointer")
-        .on("click", function () {
-          d3.select(this).select("rect").style("opacity", 0.7);
-          setTimeout(() => d3.select(this).select("rect").style("opacity", 1.0), 120);
-
-          var output = {
-            plot: plots[currentTestIndex],
-            testIndex: currentTestIndex + 1,
-            percentage: faction,
-            userAnswer: userAnswer,
-            error: Math.abs(userAnswer - faction)
-          };
-
-          result.push(output);
-          currentTestIndex++;
-
-          if (currentTestIndex < plots.length) {
-            setTimeout(createNextTest, 0);
-          } else {
-            clearUI();
-            clearPlot();
-            uploadResult();
-            drawHeader();
-            gPlot.append("text")
-              .attr("class", "title")
-              .attr("x", 0).attr("y", 80)
-              .text("All Done! Thank you for all the tests!");
-          }
-        });
-
-      submitbutton.append("rect")
-        .attr("width", 110)
-        .attr("height", 30)
-        .attr("rx", 8)
-        .attr("ry", 8);
-
-      submitbutton.append("text")
-        .attr("x", 55)
-        .attr("y", 20)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Submit");
-    }
-
-    // run
-    var plots = generateTestOrders();
-    createNextTest();
-  </script>
-
+    <h1>Project 1: Visualization Evaluation Study report</h1>
+    <p><strong>Jiafeng Jin</strong> | CS 526 | Feb 19 2026</p>
+
+    <h2>Introduction</h2>
+    <p>
+        Research in graphical perception has shown that visual encoding choices influence how accurately users interpret
+        quantitative information. Percentage estimation tasks provide a straightforward way to evaluate perceptual
+        accuracy across different visualization designs.
+        Most prior work has focused on comparisons between fundamentally different encoding channels, such as position,
+        angle, or color. In this study, we examine both differences across encoding categories and structural variations
+        within the same encoding type. We investigate whether encoding type remains the dominant factor in estimation
+        accuracy and whether added structural complexity introduces measurable changes in perceptual performance.
+
+    </p>
+
+    <h2>Background</h2>
+    <p>
+        Research on graphical perception has established that visual encoding choices influence how accurately people
+        interpret quantitative information. Cleveland & McGill (1984) have systematically compared different graphical
+        encoding and demonstrated that certain visual types, such as position along common scale, are more accurate than
+        others, including angle, area and colors. They also introduced the log error metric to evaluate estimation
+        accuracy.
+        Building on this work, Heer & Bostock (2010) replicated and extended these studies with large-scale, web-based
+        experiments with extra channels tested. Their results confirmed perceptual differences across encoding types and
+        demonstrated that controlled graphical perception studies can be effectively conducted in online environments.
+        This work provides methodological support for web-based experimental designs such as the one used in the present
+        study.
+        Subsequent research has revisited the angle- and arc-based encoding in greater detail. Kosara & Skau (2016)
+        examined variations of pie charts and related arc-length representations. Their research shows that viewers rely
+        on multiple geometric cues—including central angle, arc length, and area—when making judgments. They also noted
+        that certain radial or arc-based variants may introduce additional perceptual challenges due to geometric
+        distortion or reduced spatial alignment.
+        This study builds on this line of research by evaluating both cross-category encoding differences (e.g. length,
+        angle, color) and structural variations within encoding types. By comparing multiple visualizations using a
+        standardized error metric, this study aims to further clarify how encoding category and structural
+        complexity contribute to perceptual accuracy.
+
+    </p>
+
+    <h2>Methods</h2>
+    <h4>Experimental Design</h4>
+    <p>
+        The study employed a within-subject design in which each participant completed trials across all visualization
+        types. Eight participants took part in the experiment. Each participant completed 40 trials (5 trials × 8
+        visualization types), yielding a total of 320 observations. Trial order was randomized to reduce potential order
+        effects.
+    </p>
+
+    <h4>Visualization Types</h4>
+    <p>
+        The study evaluated eight visualization types, grouped according to their primary encoding channel. Two
+        designs—bar and bottom-aligned divided bar—encode magnitude as position along a common scale, consistent with
+        the classification proposed by Cleveland & McGill.
+        Two additional designs—divided bar without alignment and an oriented line-length comparison—encode magnitude
+        through length but without a shared baseline or alignment, introducing structural variation within the length
+        channel.
+        Two visualizations—pie chart and radial bar chart—represent angular or arc-based encodings in a polar layout.
+        Finally, alpha-based and heat-based visualizations encode magnitude using color intensity rather than spatial
+        position.
+
+    </p>
+
+    <h4>Procedure</h4>
+    <p>
+        In each trial, a visualization displaying a target percentage was shown to the participant. Target percentages
+        were randomly generated within the range of 20% to 80% to avoid extreme values. Participants estimated the
+        percentage using a slider input (0-100), with the numeric value displayed in real time.
+        The experiment was conducted online using a web-based interface, and participants completed the study on their
+        own devices. No time limit was imposed, and response time was not recorded. Only complete trials were included
+        in the analysis.
+
+    </p>
+
+    <h4>Error Metric</h4>
+    <p>
+        Estimation accuracy was measured using the log₂(|error| + 1/8) metric proposed by Cleveland & McGill, where
+        error is defined as the absolute difference between the judged and true percentage.
+    </p>
+
+    <h2>Results</h2>
+
+    <p>
+        Each visualization type included 40 trials (8 participants × 5 trials). Mean log₂ estimation error and 95%
+        confidence intervals were calculated for each visualization type. Figure 1 shows the results.
+    </p>
+    <h4>Position along common scale</h4>
+    <p>
+        Among position-aligned encodings, the standard bar chart exhibited relatively low mean log error (M ≈ 1.94). The
+        bottom-aligned divided bar showed slightly higher error (M ≈ 2.20), though both remained within the lower range
+        compared to other visualization types.
+    </p>
+    <h4>Length</h4>
+    <p>
+        The length-based encodings without shared alignment showed higher mean log error. The oriented line-length
+        design (M ≈ 2.37) and the non-aligned divided bar (M ≈ 2.50) both exceeded the baseline-aligned variants.
+    </p>
+    <h4>Angle</h4>
+    <p>
+        Angular encodings also exhibited relatively low mean log error. The pie chart yielded the lowest mean log error
+        (M ≈ 1.60), while the
+        radial bar chart also showed relatively low error (M ≈ 1.87), comparable to the baseline-aligned bar chart.
+    </p>
+    <h4>Color</h4>
+    <p>
+        Color-based encodings produced the highest mean log error. Both alpha-based (M ≈ 3.26) and heat-based (M ≈ 3.40)
+        visualizations showed substantially higher error compared to spatial encodings.
+    </p>
+    <p>
+        Confidence intervals overlapped across several visualization types, particularly among spatial encodings.
+    </p>
+
+    <img src="bar_log_error.png" alt="Mean log error bar chart">
+    <div class="caption">
+        Figure 1. Mean log₂ error with 95% confidence intervals for each visualization type.
+    </div>
+
+    <img src="dot_log_error.png" alt="Dot plot of log error">
+    <div class="caption">
+        Figure 2. Dot plot representation of mean log₂ error with 95% confidence intervals.
+    </div>
+
+
+    <table>
+        <tr>
+            <th>Visualization</th>
+            <th>Mean Log Error</th>
+            <th>CI Lower</th>
+            <th>CI Upper</th>
+        </tr>
+        <tr>
+            <td>Bar</td>
+            <td>1.94</td>
+            <td>1.44</td>
+            <td>2.43</td>
+        </tr>
+        <tr>
+            <td>Bottom-Aligned Divided Bar</td>
+            <td>2.20</td>
+            <td>1.76</td>
+            <td>2.63</td>
+        </tr>
+        <tr>
+            <td>Divided Bar without alignment</td>
+            <td>2.50</td>
+            <td>2.13</td>
+            <td>2.86</td>
+        </tr>
+        <tr>
+            <td>Oriented Line-Length</td>
+            <td>2.37</td>
+            <td>1.82</td>
+            <td>2.91</td>
+        </tr>
+        <tr>
+            <td>Pie</td>
+            <td>1.60</td>
+            <td>0.90</td>
+            <td>2.30</td>
+        </tr>
+        <tr>
+            <td>Radial Bar</td>
+            <td>1.87</td>
+            <td>1.33</td>
+            <td>2.41</td>
+        </tr>
+        <tr>
+            <td>Alpha</td>
+            <td>3.26</td>
+            <td>2.67</td>
+            <td>3.86</td>
+        </tr>
+        <tr>
+            <td>Heat Map</td>
+            <td>3.40</td>
+            <td>2.87</td>
+            <td>3.92</td>
+        </tr>
+    </table>
+
+    <h2>Discussion</h2>
+    <p>
+        Overall, estimation accuracy varied across the four encoding categories tested: position along a common scale,
+        length without a common scale, angle/arc-based encodings, and color-based encodings. In addition to comparing
+        these categories, we introduced more visually complex variants within categories to examine how much additional
+        visual overhead affects accuracy.
+    </p>
+    <p>
+        Position-aligned encodings correspond to the strongest encoding types identified by Cleveland & McGill and
+        showed relatively low estimation error. Within this category, the standard bar chart exhibited slightly lower
+        mean error than the bottom-aligned divided bar. This difference may reflect the segmentation in the divided bar,
+        which introduces minor visual overhead while preserving the shared baseline.
+    </p>
+    <p>
+        Length-based encodings without a shared common scale showed higher estimation error compared to position-aligned
+        encodings. Without a common linear reference, users may find it more difficult to accurately perceive and
+        compare magnitudes. The oriented line-length design performed slightly better than the non-aligned divided bar,
+        possibly because the shared origin provides a partial alignment cue despite the change in orientation. However,
+        the confidence intervals overlap, suggesting that this difference may not be consistent across all participants.
+    </p>
+    <p>
+        Angular encodings showed a somewhat surprising pattern in this study. Both the pie chart and the radial bar
+        chart produced mean log error values comparable to, and in some cases slightly lower than, the baseline-aligned
+        bar chart. However, these encodings also exhibited relatively high standard deviations, suggesting greater
+        variability across participants. Therefore, these results should not be interpreted as definitive evidence that
+        angular encodings outperform position-based encodings.
+    </p>
+    <p>
+        Consistent with findings from Kosara and Skau, the pie chart did not perform as poorly as commonly assumed. The
+        radial bar chart, however, showed slightly higher error than the regular pie chart. Because radial bars rely on
+        varying arc lengths and polar geometry, these structural differences may introduce additional perceptual
+        challenges when interpreting magnitude.
+    </p>
+    <p>
+        Color-based encodings produced the highest estimation error among all categories. Both alpha-based and
+        heat-based visualizations showed substantially larger mean log error compared to spatial encodings. In the
+        absence of a clear spatial reference, users may find it difficult to translate variations in color intensity
+        into precise numerical estimates.
+    </p>
+    <p>
+        The heat-based visualization, in particular, appeared to introduce additional visual interference due to
+        surrounding color variation. Because human perception of color intensity is not linearly mapped to numerical
+        magnitude, these encodings may inherently lead to larger estimation errors.
+    </p>
+    <p>
+        This study has several limitations. The sample size was relatively small (N = 8), and each visualization type
+        included only five trials per participant. Participants completed the experiment on their own devices, and no
+        time constraints were imposed, which may have introduced variability in viewing conditions and decision
+        strategies. Therefore, the findings should be interpreted as exploratory rather than definitive.
+    </p>
+
+    <h2>Conclusion</h2>
+    <p>
+        This study examined how different encoding categories influence perceptual accuracy in percentage estimation
+        tasks. Overall, position-based encodings with a shared common scale showed relatively low error, while
+        color-based encodings produced the highest error. Length-based encodings without shared alignment demonstrated
+        reduced accuracy compared to baseline-aligned designs, suggesting that structural alignment plays an important
+        role in perceptual judgment. Angular encodings performed competitively, though with greater variability across
+        participants. While these findings broadly align with prior graphical perception research, the limited sample
+        size and uncontrolled viewing conditions indicate that the results should be interpreted cautiously. Future work
+        with larger participant samples and more controlled experimental settings could further clarify how encoding
+        category and structural variation jointly affect estimation accuracy.
+    </p>
+    <p>
+        The interactive experiment can be accessed
+        <a href="../index.html">here</a>.
+    </p>
+
+    <h2>References</h2>
+    <p>
+        Cleveland, W. S., & McGill, R. (1984). Graphical perception: Theory, experimentation, and application to the
+        development of graphical methods. <em>Journal of the American Statistical Association</em>, 79(387), 531–554.
+    </p>
+
+    <p>
+        Heer, J., & Bostock, M. (2010). Crowdsourcing graphical perception: Using mechanical turk to assess
+        visualization design. In <em>Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI
+            ’10)</em>, 203–212.
+    </p>
+
+    <p>
+        Kosara, R., & Skau, D. (2016). An evaluation of pie charts and their variants in comparison to bar charts. In
+        <em>Proceedings of the IEEE Pacific Visualization Symposium (PacificVis)</em>, 230–239.
+    </p>
 </body>
 
 </html>
