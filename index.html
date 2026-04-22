@@ -2,321 +2,1810 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Project 1: Visualization Evaluation Study report</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 40px;
-            line-height: 1.6;
-            max-width: 900px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scatterplot Mean Estimation Test + PREVis Rating</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d7e0ea;
+      --grid: #dbe7f3;
+      --accent: #2563eb;
+      --danger: #dc2626;
+    }
 
-        h1 {
-            text-align: center;
-        }
+    * {
+      box-sizing: border-box
+    }
 
-        h2 {
-            margin-top: 40px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 5px;
-        }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef3f8 100%);
+      color: var(--text);
+    }
 
-        img {
-            max-width: 100%;
-            height: auto;
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 12px 14px 18px;
+    }
 
-        .caption {
-            font-size: 0.9em;
-            color: #555;
-            margin-bottom: 30px;
-        }
+    @media (max-width: 1100px) {
+      .page {
+        padding: 14px 14px 24px;
+      }
 
-        table {
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
+      .card {
+        padding: 16px 16px 20px;
+      }
+    }
 
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 6px 10px;
-        }
+    .screen {
+      display: none
+    }
 
-        th {
-            background-color: #f5f5f5;
-        }
-    </style>
+    .screen.active {
+      display: block
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 18px 18px;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+    }
+
+    h1,
+    h2 {
+      margin-top: 0
+    }
+
+    p {
+      line-height: 1.6
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .center {
+      text-align: center
+    }
+
+    .progress {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .prompt {
+      text-align: center;
+      font-size: clamp(18px, 2.2vw, 24px);
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+      line-height: 1.18;
+      max-width: 980px;
+      margin-left: auto;
+      margin-right: auto;
+      text-wrap: balance;
+    }
+
+    .extreme-highlight {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.95em;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      margin: 0 3px;
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.15);
+    }
+
+    .extreme-highlight.high {
+      background: #0f172a;
+    }
+
+    .extreme-highlight.low {
+      background: #334155;
+    }
+
+    .chart-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: auto;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    svg {
+      width: min(100%, 980px);
+      height: auto;
+      aspect-ratio: 1080 / 760;
+      background: #fbfdff;
+      border: 1px solid #e6edf5;
+      border-radius: 16px;
+      display: block;
+      overflow: hidden;
+    }
+
+    .controls {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .estimate-panel {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px 18px;
+      margin: 2px auto 10px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      min-height: 48px;
+      font-size: clamp(15px, 1.7vw, 17px);
+      font-weight: 800;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    .estimate-value {
+      color: var(--danger);
+      min-width: 64px;
+      text-align: left;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(0.96)
+    }
+
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .results {
+      margin-top: 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      overflow: auto;
+      font-size: 13px;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+
+    ul {
+      line-height: 1.8;
+      margin-bottom: 22px;
+    }
+
+    .scale-hint {
+      display: flex;
+      justify-content: space-between;
+      max-width: 980px;
+      margin: 0 auto 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .rating-block {
+      max-width: 980px;
+      margin: 0 auto 10px;
+      padding: 10px 12px 8px;
+      background: #fbfdff;
+      border: 1px solid #e6edf5;
+      border-radius: 12px;
+    }
+
+    .rating-q {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .rating-options {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .rating-options label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      padding: 5px 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin: 0;
+      min-height: 46px;
+    }
+
+    .rating-options input {
+      margin: 0;
+    }
+
+    .status {
+      max-width: 980px;
+      margin: 8px auto 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .selection-line {
+      stroke: var(--danger);
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 6;
+      pointer-events: none;
+    }
+
+    .selection-dot {
+      fill: var(--danger);
+      stroke: #ffffff;
+      stroke-width: 2;
+      pointer-events: none;
+    }
+
+    .selection-label {
+      fill: var(--danger);
+      font-size: 14px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    .y-axis-hit {
+      fill: transparent;
+      cursor: crosshair;
+    }
+
+    .y-axis-hit.active {
+      fill: rgba(37, 99, 235, 0.06);
+    }
+
+    .trial-meta {
+      display: none;
+    }
+
+    .pill {
+      background: #eef4ff;
+      color: #315389;
+      border: 1px solid #d7e6ff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .target-pill {
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: clamp(12px, 1.5vw, 13px);
+      font-weight: 800;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      vertical-align: middle;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    }
+
+    @media (max-width: 900px) {
+      .prompt {
+        max-width: 92%;
+      }
+
+      .trial-meta {
+        gap: 6px;
+      }
+
+      .pill {
+        font-size: 11px;
+        padding: 5px 9px;
+      }
+
+      .target-pill {
+        min-width: 64px;
+        padding: 4px 10px;
+      }
+    }
+
+    #ratingScreen .card {
+      padding: 12px 16px 14px;
+    }
+
+    #ratingScreen h2 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+    }
+
+    #ratingScreen p {
+      margin: 0 0 6px 0;
+      line-height: 1.35;
+      font-size: 14px;
+    }
+  </style>
 </head>
 
 <body>
-
-    <h1>Project 1: Visualization Evaluation Study report</h1>
-    <p><strong>Jiafeng Jin</strong> | CS 526 | Feb 19 2026</p>
-
-    <h2>Introduction</h2>
-    <p>
-        Research in graphical perception has shown that visual encoding choices influence how accurately users interpret
-        quantitative information. Percentage estimation tasks provide a straightforward way to evaluate perceptual
-        accuracy across different visualization designs.
-        Most prior work has focused on comparisons between fundamentally different encoding channels, such as position,
-        angle, or color. In this study, we examine both differences across encoding categories and structural variations
-        within the same encoding type. We investigate whether encoding type remains the dominant factor in estimation
-        accuracy and whether added structural complexity introduces measurable changes in perceptual performance.
-
-    </p>
-
-    <h2>Background</h2>
-    <p>
-        Research on graphical perception has established that visual encoding choices influence how accurately people
-        interpret quantitative information. Cleveland & McGill (1984) have systematically compared different graphical
-        encoding and demonstrated that certain visual types, such as position along common scale, are more accurate than
-        others, including angle, area and colors. They also introduced the log error metric to evaluate estimation
-        accuracy.
-        Building on this work, Heer & Bostock (2010) replicated and extended these studies with large-scale, web-based
-        experiments with extra channels tested. Their results confirmed perceptual differences across encoding types and
-        demonstrated that controlled graphical perception studies can be effectively conducted in online environments.
-        This work provides methodological support for web-based experimental designs such as the one used in the present
-        study.
-        Subsequent research has revisited the angle- and arc-based encoding in greater detail. Kosara & Skau (2016)
-        examined variations of pie charts and related arc-length representations. Their research shows that viewers rely
-        on multiple geometric cues—including central angle, arc length, and area—when making judgments. They also noted
-        that certain radial or arc-based variants may introduce additional perceptual challenges due to geometric
-        distortion or reduced spatial alignment.
-        This study builds on this line of research by evaluating both cross-category encoding differences (e.g. length,
-        angle, color) and structural variations within encoding types. By comparing multiple visualizations using a
-        standardized error metric, this study aims to further clarify how encoding category and structural
-        complexity contribute to perceptual accuracy.
-
-    </p>
-
-    <h2>Methods</h2>
-    <h4>Experimental Design</h4>
-    <p>
-        The study employed a within-subject design in which each participant completed trials across all visualization
-        types. Eight participants took part in the experiment. Each participant completed 40 trials (5 trials × 8
-        visualization types), yielding a total of 320 observations. Trial order was randomized to reduce potential order
-        effects.
-    </p>
-
-    <h4>Visualization Types</h4>
-    <p>
-        The study evaluated eight visualization types, grouped according to their primary encoding channel. Two
-        designs—bar and bottom-aligned divided bar—encode magnitude as position along a common scale, consistent with
-        the classification proposed by Cleveland & McGill.
-        Two additional designs—divided bar without alignment and an oriented line-length comparison—encode magnitude
-        through length but without a shared baseline or alignment, introducing structural variation within the length
-        channel.
-        Two visualizations—pie chart and radial bar chart—represent angular or arc-based encodings in a polar layout.
-        Finally, alpha-based and heat-based visualizations encode magnitude using color intensity rather than spatial
-        position.
-
-    </p>
-
-    <h4>Procedure</h4>
-    <p>
-        In each trial, a visualization displaying a target percentage was shown to the participant. Target percentages
-        were randomly generated within the range of 20% to 80% to avoid extreme values. Participants estimated the
-        percentage using a slider input (0-100), with the numeric value displayed in real time.
-        The experiment was conducted online using a web-based interface, and participants completed the study on their
-        own devices. No time limit was imposed, and response time was not recorded. Only complete trials were included
-        in the analysis.
-
-    </p>
-
-    <h4>Error Metric</h4>
-    <p>
-        Estimation accuracy was measured using the log₂(|error| + 1/8) metric proposed by Cleveland & McGill, where
-        error is defined as the absolute difference between the judged and true percentage.
-    </p>
-
-    <h2>Results</h2>
-
-    <p>
-        Each visualization type included 40 trials (8 participants × 5 trials). Mean log₂ estimation error and 95%
-        confidence intervals were calculated for each visualization type. Figure 1 shows the results.
-    </p>
-    <h4>Position along common scale</h4>
-    <p>
-        Among position-aligned encodings, the standard bar chart exhibited relatively low mean log error (M ≈ 1.94). The
-        bottom-aligned divided bar showed slightly higher error (M ≈ 2.20), though both remained within the lower range
-        compared to other visualization types.
-    </p>
-    <h4>Length</h4>
-    <p>
-        The length-based encodings without shared alignment showed higher mean log error. The oriented line-length
-        design (M ≈ 2.37) and the non-aligned divided bar (M ≈ 2.50) both exceeded the baseline-aligned variants.
-    </p>
-    <h4>Angle</h4>
-    <p>
-        Angular encodings also exhibited relatively low mean log error. The pie chart yielded the lowest mean log error
-        (M ≈ 1.60), while the
-        radial bar chart also showed relatively low error (M ≈ 1.87), comparable to the baseline-aligned bar chart.
-    </p>
-    <h4>Color</h4>
-    <p>
-        Color-based encodings produced the highest mean log error. Both alpha-based (M ≈ 3.26) and heat-based (M ≈ 3.40)
-        visualizations showed substantially higher error compared to spatial encodings.
-    </p>
-    <p>
-        Confidence intervals overlapped across several visualization types, particularly among spatial encodings.
-    </p>
-
-    <img src="bar_log_error.png" alt="Mean log error bar chart">
-    <div class="caption">
-        Figure 1. Mean log₂ error with 95% confidence intervals for each visualization type.
+  <div class="page">
+    <div id="introScreen" class="screen active">
+      <div class="card">
+        <h1>Scatterplot Mean Estimation Test</h1>
+        <p>
+          You will complete 5 clutter groups. In each plot, estimate the average <strong>Y value</strong> of one target
+          color group and click the requested highest or lowest point.
+        </p>
+        <ul>
+          <li>Each trial highlights one target color group in the prompt. Estimate the mean Y value of that color group
+            only, not all points together.</li>
+          <li>The scatterplots vary in dot size, stronger cluster rotation, and more mixed color-group clutter.</li>
+          <li>Each clutter group contains 8 consecutive plots. You will rate readability once after finishing the whole
+            group.</li>
+          <li>Five clutter groups will be shown in a random order.</li>
+        </ul>
+        <div class="note" style="text-align:left; margin:16px 0 14px; max-width:560px;">
+          A unique participant ID will be generated automatically each time the test starts.
+        </div>
+        <div class="button-row">
+          <button id="beginBtn">Begin Test</button>
+        </div>
+      </div>
     </div>
 
-    <img src="dot_log_error.png" alt="Dot plot of log error">
-    <div class="caption">
-        Figure 2. Dot plot representation of mean log₂ error with 95% confidence intervals.
+    <div id="trialScreen" class="screen">
+      <div class="card">
+        <div class="progress" id="progressText">Trial 1 of 18</div>
+        <div class="prompt" id="trialPrompt">Estimate the average Y value of the target color group by clicking the
+          Y-axis</div>
+        <div class="trial-meta" id="trialMeta"></div>
+        <div class="chart-wrap">
+          <div id="chart" style="width:min(100%,1080px); margin:0 auto;"></div>
+        </div>
+        <div class="controls">
+          <div class="estimate-panel">
+            <div>Mean estimate: <span class="estimate-value" id="clickEstimateValue">Not selected</span></div>
+            <div>Extreme point: <span class="estimate-value" id="pointPickValue">Not selected</span></div>
+          </div>
+          <div class="button-row">
+            <button id="submitEstimateBtn" disabled>Submit Estimate</button>
+          </div>
+          <div class="note">Only judge the target color shown in the prompt. Click the left Y-axis to choose the target
+            group's mean Y value, and click a point in that same target group to choose its highest or lowest point.
+            Submit becomes available only after both responses are selected.</div>
+        </div>
+      </div>
     </div>
 
+    <div id="ratingScreen" class="screen">
+      <div class="card">
+        <div class="progress" id="ratingProgressText">Trial 1 of 18</div>
+        <h2>Post-trial Rating</h2>
+        <p>Please rate the following statements from 1 (strongly disagree) to 7 (strongly agree).</p>
+        <div class="scale-hint">
+          <span>1 = Strongly disagree</span>
+          <span>7 = Strongly agree</span>
+        </div>
+        <div id="ratingItems"></div>
+        <div class="button-row">
+          <button id="submitRatingBtn">Continue</button>
+        </div>
+        <div class="status" id="ratingStatus">Answer all items, then continue.</div>
+      </div>
+    </div>
 
-    <table>
-        <tr>
-            <th>Visualization</th>
-            <th>Mean Log Error</th>
-            <th>CI Lower</th>
-            <th>CI Upper</th>
-        </tr>
-        <tr>
-            <td>Bar</td>
-            <td>1.94</td>
-            <td>1.44</td>
-            <td>2.43</td>
-        </tr>
-        <tr>
-            <td>Bottom-Aligned Divided Bar</td>
-            <td>2.20</td>
-            <td>1.76</td>
-            <td>2.63</td>
-        </tr>
-        <tr>
-            <td>Divided Bar without alignment</td>
-            <td>2.50</td>
-            <td>2.13</td>
-            <td>2.86</td>
-        </tr>
-        <tr>
-            <td>Oriented Line-Length</td>
-            <td>2.37</td>
-            <td>1.82</td>
-            <td>2.91</td>
-        </tr>
-        <tr>
-            <td>Pie</td>
-            <td>1.60</td>
-            <td>0.90</td>
-            <td>2.30</td>
-        </tr>
-        <tr>
-            <td>Radial Bar</td>
-            <td>1.87</td>
-            <td>1.33</td>
-            <td>2.41</td>
-        </tr>
-        <tr>
-            <td>Alpha</td>
-            <td>3.26</td>
-            <td>2.67</td>
-            <td>3.86</td>
-        </tr>
-        <tr>
-            <td>Heat Map</td>
-            <td>3.40</td>
-            <td>2.87</td>
-            <td>3.92</td>
-        </tr>
-    </table>
+    <div id="endScreen" class="screen">
+      <div class="card center">
+        <h2>Test Complete</h2>
+        <p>Your responses have been saved in the browser for this session. If an Apps Script endpoint is configured,
+          they can also be uploaded directly to Google Sheets.</p>
+        <div class="status" id="uploadStatus" style="max-width:720px; margin:10px auto 16px;">Upload status: not
+          started.</div>
+        <div class="button-row">
+          <button id="downloadBtn">Download CSV</button>
+          <button id="restartBtn">Run Again</button>
+        </div>
+        <div class="results" id="resultsPreview"></div>
+      </div>
+    </div>
+  </div>
 
-    <h2>Discussion</h2>
-    <p>
-        Overall, estimation accuracy varied across the four encoding categories tested: position along a common scale,
-        length without a common scale, angle/arc-based encodings, and color-based encodings. In addition to comparing
-        these categories, we introduced more visually complex variants within categories to examine how much additional
-        visual overhead affects accuracy.
-    </p>
-    <p>
-        Position-aligned encodings correspond to the strongest encoding types identified by Cleveland & McGill and
-        showed relatively low estimation error. Within this category, the standard bar chart exhibited slightly lower
-        mean error than the bottom-aligned divided bar. This difference may reflect the segmentation in the divided bar,
-        which introduces minor visual overhead while preserving the shared baseline.
-    </p>
-    <p>
-        Length-based encodings without a shared common scale showed higher estimation error compared to position-aligned
-        encodings. Without a common linear reference, users may find it more difficult to accurately perceive and
-        compare magnitudes. The oriented line-length design performed slightly better than the non-aligned divided bar,
-        possibly because the shared origin provides a partial alignment cue despite the change in orientation. However,
-        the confidence intervals overlap, suggesting that this difference may not be consistent across all participants.
-    </p>
-    <p>
-        Angular encodings showed a somewhat surprising pattern in this study. Both the pie chart and the radial bar
-        chart produced mean log error values comparable to, and in some cases slightly lower than, the baseline-aligned
-        bar chart. However, these encodings also exhibited relatively high standard deviations, suggesting greater
-        variability across participants. Therefore, these results should not be interpreted as definitive evidence that
-        angular encodings outperform position-based encodings.
-    </p>
-    <p>
-        Consistent with findings from Kosara and Skau, the pie chart did not perform as poorly as commonly assumed. The
-        radial bar chart, however, showed slightly higher error than the regular pie chart. Because radial bars rely on
-        varying arc lengths and polar geometry, these structural differences may introduce additional perceptual
-        challenges when interpreting magnitude.
-    </p>
-    <p>
-        Color-based encodings produced the highest estimation error among all categories. Both alpha-based and
-        heat-based visualizations showed substantially larger mean log error compared to spatial encodings. In the
-        absence of a clear spatial reference, users may find it difficult to translate variations in color intensity
-        into precise numerical estimates.
-    </p>
-    <p>
-        The heat-based visualization, in particular, appeared to introduce additional visual interference due to
-        surrounding color variation. Because human perception of color intensity is not linearly mapped to numerical
-        magnitude, these encodings may inherently lead to larger estimation errors.
-    </p>
-    <p>
-        This study has several limitations. The sample size was relatively small (N = 8), and each visualization type
-        included only five trials per participant. Participants completed the experiment on their own devices, and no
-        time constraints were imposed, which may have introduced variability in viewing conditions and decision
-        strategies. Therefore, the findings should be interpreted as exploratory rather than definitive.
-    </p>
+  <script>
+    const width = 1080;
+    const height = 760;
+    const margin = { top: 28, right: 34, bottom: 72, left: 76 };
 
-    <h2>Conclusion</h2>
-    <p>
-        This study examined how different encoding categories influence perceptual accuracy in percentage estimation
-        tasks. Overall, position-based encodings with a shared common scale showed relatively low error, while
-        color-based encodings produced the highest error. Length-based encodings without shared alignment demonstrated
-        reduced accuracy compared to baseline-aligned designs, suggesting that structural alignment plays an important
-        role in perceptual judgment. Angular encodings performed competitively, though with greater variability across
-        participants. While these findings broadly align with prior graphical perception research, the limited sample
-        size and uncontrolled viewing conditions indicate that the results should be interpreted cautiously. Future work
-        with larger participant samples and more controlled experimental settings could further clarify how encoding
-        category and structural variation jointly affect estimation accuracy.
-    </p>
-    <p>
-        The interactive experiment can be accessed
-        <a href="experiment/index.html">here</a>.
-    </p>
+    const design = {
+      trialsPerBlock: 8,
+      clutterLevels: [
+        {
+          name: "l1",
+          label: "L1",
+          pointCount: 90,
+          dotRadius: 7,
+          rotationDegrees: 8,
+          centerJitter: 8,
+          clusterSpreadX: 6.2,
+          clusterSpreadY: 13,
+          groupSeparation: 17,
+          fakeExtremeCount: 0,
+          nearExtremeCompression: 0.00,
+          minGapFactor: 0.92,
+          minGapPasses: 4,
+          colorGroupCount: 1,
+          patternWeights: { gaussian: 0.80, bimodal: 0.20, skewed: 0.00 }
+        },
+        {
+          name: "l2",
+          label: "L2",
+          pointCount: 120,
+          dotRadius: 8,
+          rotationDegrees: 16,
+          centerJitter: 7,
+          clusterSpreadX: 5.6,
+          clusterSpreadY: 14.5,
+          groupSeparation: 13.5,
+          fakeExtremeCount: 1,
+          nearExtremeCompression: 0.12,
+          minGapFactor: 0.88,
+          minGapPasses: 4,
+          colorGroupCount: 2,
+          patternWeights: { gaussian: 0.60, bimodal: 0.25, skewed: 0.15 }
+        },
+        {
+          name: "l3",
+          label: "L3",
+          pointCount: 160,
+          dotRadius: 10,
+          rotationDegrees: 28,
+          centerJitter: 5.8,
+          clusterSpreadX: 4.7,
+          clusterSpreadY: 16.5,
+          groupSeparation: 9.2,
+          fakeExtremeCount: 2,
+          nearExtremeCompression: 0.28,
+          minGapFactor: 0.82,
+          minGapPasses: 5,
+          colorGroupCount: 3,
+          patternWeights: { gaussian: 0.40, bimodal: 0.35, skewed: 0.25 }
+        },
+        {
+          name: "l4",
+          label: "L4",
+          pointCount: 210,
+          dotRadius: 12,
+          rotationDegrees: 44,
+          centerJitter: 4.4,
+          clusterSpreadX: 3.8,
+          clusterSpreadY: 19,
+          groupSeparation: 6.5,
+          fakeExtremeCount: 3,
+          nearExtremeCompression: 0.50,
+          minGapFactor: 0.76,
+          minGapPasses: 5,
+          colorGroupCount: 4,
+          patternWeights: { gaussian: 0.25, bimodal: 0.40, skewed: 0.35 }
+        },
+        {
+          name: "l5",
+          label: "L5",
+          pointCount: 260,
+          dotRadius: 14,
+          rotationDegrees: 62,
+          centerJitter: 3.2,
+          clusterSpreadX: 2.9,
+          clusterSpreadY: 22,
+          groupSeparation: 4.4,
+          fakeExtremeCount: 4,
+          nearExtremeCompression: 0.72,
+          minGapFactor: 0.70,
+          minGapPasses: 5,
+          colorGroupCount: 5,
+          patternWeights: { gaussian: 0.15, bimodal: 0.40, skewed: 0.45 }
+        }
+      ],
+      repeats: 1
+    };
 
-    <h2>References</h2>
-    <p>
-        Cleveland, W. S., & McGill, R. (1984). Graphical perception: Theory, experimentation, and application to the
-        development of graphical methods. <em>Journal of the American Statistical Association</em>, 79(387), 531–554.
-    </p>
+    const ratingQuestions = [
+      { id: "find", text: "Across the previous set of plots, I could easily find specific elements." },
+      { id: "identify", text: "Across the previous set of plots, I could easily identify relevant information." },
+      { id: "inform", text: "Across the previous set of plots, I could easily retrieve information." },
+      { id: "visible", text: "Across the previous set of plots, data features (for example, a minimum, an outlier, or a trend) were visible." },
+      { id: "clear", text: "Across the previous set of plots, I could clearly see data features (for example, a minimum, an outlier, or a trend)." }
+    ];
 
-    <p>
-        Heer, J., & Bostock, M. (2010). Crowdsourcing graphical perception: Using mechanical turk to assess
-        visualization design. In <em>Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI
-            ’10)</em>, 203–212.
-    </p>
+    const CONFIG = {
+      APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyee9F6PbeG1-gUKUaDL5ROQoVCW11_ii7hcS7eqxg9IcUYrDsQ9vCIgX2Cj1Y6jZuM/exec",
+      AUTO_UPLOAD_AT_END: true
+    };
 
-    <p>
-        Kosara, R., & Skau, D. (2016). An evaluation of pie charts and their variants in comparison to bar charts. In
-        <em>Proceedings of the IEEE Pacific Visualization Symposium (PacificVis)</em>, 230–239.
-    </p>
+    let participantId = "";
+    let uploadCompleted = false;
+    let trialList = [];
+    let trialIndex = 0;
+    let currentData = [];
+    let trialStartTime = null;
+    let results = [];
+    let blockRatings = [];
+    let pendingEstimateResult = null;
+    let selectedEstimate = null;
+    let selectedPoint = null;
+    let selectedPointIndex = null;
+
+    const palette = ["#2563eb", "#dc2626", "#16a34a", "#9333ea", "#f59e0b"];
+
+    const colorNames = ["Blue", "Red", "Green", "Purple", "Orange"];
+    const patternNames = {
+      gaussian: "Gaussian",
+      bimodal: "Bimodal",
+      skewed: "Skewed"
+    };
+
+    function getTargetGroup(trial) {
+      if (trial.colorGroupCount === 1) return 0;
+      return Math.floor(Math.random() * trial.colorGroupCount);
+    }
+
+    function getTrueMeanForTarget(data, targetGroup) {
+      return d3.mean(data.filter(d => d.group === targetGroup), d => d.y);
+    }
+
+    function updateTrialPrompt(trial) {
+      const prompt = document.getElementById("trialPrompt");
+      if (!prompt) return;
+
+      const name = colorNames[trial.targetGroup] || "Target";
+      const extremeLabel = trial.extremeType === "max"
+        ? '<span class="extreme-highlight high">HIGHEST</span>'
+        : '<span class="extreme-highlight low">LOWEST</span>';
+
+      prompt.innerHTML =
+        'Estimate the average Y value of the <span class="target-pill" style="background:' +
+        palette[trial.targetGroup] + ';">' + name +
+        '</span> group by clicking the Y-axis, and click the ' +
+        extremeLabel + ' point in that group.';
+    }
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    const xScale = d3.scaleLinear().domain([0, 100]).range([margin.left, width - margin.right]);
+    const plotPadY = 12;
+
+    const yScale = d3.scaleLinear()
+      .domain([0, 100])
+      .range([height - margin.bottom - plotPadY, margin.top + plotPadY]);
+
+
+    function generateParticipantId() {
+      const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+      return "P-" + Date.now().toString(36).toUpperCase() + "-" + rand;
+    }
+
+    function loadSavedParticipantId() {
+      try {
+        return localStorage.getItem("scatterplot_participant_id") || "";
+      } catch (err) {
+        return "";
+      }
+    }
+
+    function saveParticipantId(id) {
+      try {
+        localStorage.setItem("scatterplot_participant_id", id);
+      } catch (err) { }
+    }
+
+    function getUploadStatusEl() {
+      return document.getElementById("uploadStatus");
+    }
+
+    function setUploadStatus(message) {
+      const el = getUploadStatusEl();
+      if (el) el.textContent = "Upload status: " + message;
+    }
+
+    async function uploadResultsToGoogleSheets() {
+      if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes("PASTE_YOUR")) {
+        setUploadStatus("skipped — Apps Script URL not configured.");
+        return { ok: false, skipped: true };
+      }
+
+      const payload = {
+        participantId,
+        submittedAt: new Date().toISOString(),
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        summary: {
+          nTrials: results.length,
+          nBlocks: blockRatings.length
+        },
+        rows: results.map(r => ({
+          participantId,
+          submittedAt: new Date().toISOString(),
+          trialIndex: r.trialIndex,
+          blockIndex: r.blockIndex,
+          trialWithinBlock: r.trialWithinBlock,
+          pointCount: r.pointCount,
+          dotRadius: r.dotRadius,
+          rotationDegrees: r.rotationDegrees,
+          clutterName: r.clutterName,
+          clutterLabel: r.clutterLabel,
+          patternType: r.patternType,
+          colorGroupCount: r.colorGroupCount,
+          targetGroup: r.targetGroup,
+          targetGroupName: r.targetGroupName,
+          targetMeanY: r.targetMeanY,
+          meanEstimate: r.meanEstimate,
+          trueMeanY: r.trueMeanY,
+          meanAbsError: r.meanAbsError,
+          extremeType: r.extremeType,
+          selectedPointIndex: r.selectedPointIndex,
+          selectedX: r.selectedX,
+          selectedY: r.selectedY,
+          trueExtremeX: r.trueExtremeX,
+          trueExtremeY: r.trueExtremeY,
+          extremeCorrect: r.extremeCorrect,
+          xError: r.xError,
+          yError: r.yError,
+          euclideanError: r.euclideanError,
+          reactionTime: r.reactionTime,
+          find: r.ratings.find,
+          identify: r.ratings.identify,
+          inform: r.ratings.inform,
+          visible: r.ratings.visible,
+          clear: r.ratings.clear,
+          dataReadScore: r.dataReadScore,
+          dataFeatScore: r.dataFeatScore
+        })),
+        blockRatings
+      };
+
+      try {
+        setUploadStatus("uploading...");
+        const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status + " " + text);
+        }
+        uploadCompleted = true;
+        setUploadStatus("success.");
+        return { ok: true, responseText: text };
+      } catch (err) {
+        console.error(err);
+        setUploadStatus("failed — " + err.message);
+        return { ok: false, error: err };
+      }
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function randn(mean = 0, sd = 1) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      return mean + z * sd;
+    }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function weightedChoice(options) {
+      const total = d3.sum(options, d => d.weight);
+      let draw = Math.random() * total;
+      for (const option of options) {
+        draw -= option.weight;
+        if (draw <= 0) return option.value;
+      }
+      return options[options.length - 1].value;
+    }
+
+    function choosePatternType(clutter) {
+      const weights = clutter.patternWeights || { gaussian: 0.6, bimodal: 0.25, skewed: 0.15 };
+      return weightedChoice([
+        { value: "gaussian", weight: weights.gaussian },
+        { value: "bimodal", weight: weights.bimodal },
+        { value: "skewed", weight: weights.skewed }
+      ]);
+    }
+
+    function sampleTargetMean() {
+      return Math.round(24 + Math.random() * 52);
+    }
+
+    function choose(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getPlotBounds() {
+      return {
+        x0: margin.left,
+        x1: width - margin.right,
+        y0: margin.top,
+        y1: height - margin.bottom
+      };
+    }
+
+    function clampToPlotY(yPixel) {
+      const b = getPlotBounds();
+      return clamp(yPixel, b.y0, b.y1);
+    }
+
+    function pixelToYValue(yPixel) {
+      return yScale.invert(clampToPlotY(yPixel));
+    }
+
+    function formatEstimate(v) {
+      return v == null ? "Not selected" : (+v).toFixed(1);
+    }
+
+    function rotatePoint(dx, dy, degrees) {
+      const theta = degrees * Math.PI / 180;
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      return {
+        x: dx * cos - dy * sin,
+        y: dx * sin + dy * cos
+      };
+    }
+
+    function createGroupPoint(center, angleDegrees, dx, dy, group, color) {
+      const rotated = rotatePoint(dx, dy, angleDegrees);
+      return {
+        x: clamp(center.x + rotated.x, 3, 97),
+        y: clamp(center.y + rotated.y, 2, 98),
+        group,
+        color
+      };
+    }
+
+    function generateGaussianGroup(count, center, angleDegrees, trial, group, color) {
+      const points = [];
+      const centerJitter = trial.centerJitter;
+      const sx = trial.clusterSpreadX;
+      const sy = trial.clusterSpreadY;
+
+      for (let i = 0; i < count; i++) {
+        const localCenter = {
+          x: center.x + randn(0, centerJitter),
+          y: center.y + randn(0, centerJitter)
+        };
+        const dx = randn(0, sx);
+        const dy = randn(0, sy);
+        const localAngle = angleDegrees + randn(0, 8);
+        points.push(createGroupPoint(localCenter, localAngle, dx, dy, group, color));
+      }
+
+      return points;
+    }
+
+    function generateBimodalGroup(count, center, angleDegrees, trial, group, color) {
+      const points = [];
+      const mainWeight = 0.7 + Math.random() * 0.12;
+      const mainCount = Math.max(4, Math.round(count * mainWeight));
+      const secondCount = Math.max(3, count - mainCount);
+
+      const preservedAngle = angleDegrees * 0.18 + randn(0, 3);
+      const modeGap = Math.max(18, trial.clusterSpreadY * (1.05 + Math.random() * 0.35));
+      const xShiftA = randn(-trial.clusterSpreadX * 0.45, trial.clusterSpreadX * 0.2);
+      const xShiftB = randn(trial.clusterSpreadX * 0.35, trial.clusterSpreadX * 0.2);
+
+      const offsetA = rotatePoint(xShiftA, -modeGap * 0.55, preservedAngle);
+      const offsetB = rotatePoint(xShiftB, modeGap * 0.55, preservedAngle);
+
+      const centerA = {
+        x: center.x + offsetA.x,
+        y: center.y + offsetA.y
+      };
+      const centerB = {
+        x: center.x + offsetB.x,
+        y: center.y + offsetB.y
+      };
+
+      const sxA = Math.max(2.2, trial.clusterSpreadX * 0.62);
+      const syA = Math.max(4.8, trial.clusterSpreadY * 0.28);
+      const sxB = Math.max(2.0, trial.clusterSpreadX * 0.54);
+      const syB = Math.max(4.0, trial.clusterSpreadY * 0.24);
+
+      for (let i = 0; i < mainCount; i++) {
+        const localCenter = {
+          x: centerA.x + randn(0, trial.centerJitter * 0.28),
+          y: centerA.y + randn(0, trial.centerJitter * 0.24)
+        };
+        points.push(createGroupPoint(localCenter, preservedAngle + randn(0, 2), randn(0, sxA), randn(0, syA), group, color));
+      }
+
+      for (let i = 0; i < secondCount; i++) {
+        const localCenter = {
+          x: centerB.x + randn(0, trial.centerJitter * 0.22),
+          y: centerB.y + randn(0, trial.centerJitter * 0.22)
+        };
+        points.push(createGroupPoint(localCenter, preservedAngle + randn(0, 2), randn(0, sxB), randn(0, syB), group, color));
+      }
+
+      const kept = points.filter(d => {
+        const proj = d.y - center.y;
+        const valleyHalf = modeGap * 0.16;
+        if (Math.abs(proj) < valleyHalf) {
+          return Math.random() < 0.35;
+        }
+        return true;
+      });
+
+      while (kept.length < count) {
+        const localCenter = Math.random() < mainWeight ? centerA : centerB;
+        const sx = localCenter === centerA ? sxA : sxB;
+        const sy = localCenter === centerA ? syA : syB;
+        kept.push(createGroupPoint(localCenter, preservedAngle + randn(0, 2), randn(0, sx), randn(0, sy), group, color));
+      }
+
+      return kept.slice(0, count);
+    }
+
+    function generateSkewedGroup(count, center, angleDegrees, trial, group, color) {
+      const points = [];
+      const preservedAngle = angleDegrees * 0.15 + randn(0, 3);
+      const coreCount = Math.max(5, Math.round(count * (0.72 + Math.random() * 0.08)));
+      const tailCount = Math.max(3, count - coreCount);
+      const tailDirection = Math.random() < 0.5 ? -1 : 1;
+
+      const coreSx = Math.max(2.8, trial.clusterSpreadX * 0.72);
+      const coreSy = Math.max(5.8, trial.clusterSpreadY * 0.34);
+
+      for (let i = 0; i < coreCount; i++) {
+        const localCenter = {
+          x: center.x + randn(0, trial.centerJitter * 0.3),
+          y: center.y + randn(0, trial.centerJitter * 0.3)
+        };
+        const dy = randn(0, coreSy * (Math.random() < 0.7 ? 0.8 : 1.0));
+        points.push(createGroupPoint(localCenter, preservedAngle + randn(0, 2), randn(0, coreSx), dy, group, color));
+      }
+
+      for (let i = 0; i < tailCount; i++) {
+        const t = (i + 1) / (tailCount + 1);
+        const tailDistance = (0.75 + 2.1 * t * t + Math.random() * 0.18) * trial.clusterSpreadY * tailDirection;
+        const tailCore = {
+          x: center.x + randn(0, trial.clusterSpreadX * (0.18 + 0.22 * t)),
+          y: center.y + tailDistance
+        };
+        points.push(createGroupPoint(
+          tailCore,
+          preservedAngle + randn(0, 1.5),
+          randn(0, Math.max(1.2, trial.clusterSpreadX * (0.16 + 0.12 * t))),
+          randn(0, Math.max(1.4, trial.clusterSpreadY * (0.07 + 0.06 * t))),
+          group,
+          color
+        ));
+      }
+
+      return points;
+    }
+
+    function generateGroupPoints(patternType, count, center, angleDegrees, trial, group, color) {
+      if (patternType === "bimodal") {
+        return generateBimodalGroup(count, center, angleDegrees, trial, group, color);
+      }
+      if (patternType === "skewed") {
+        return generateSkewedGroup(count, center, angleDegrees, trial, group, color);
+      }
+      return generateGaussianGroup(count, center, angleDegrees, trial, group, color);
+    }
+
+
+    function buildClusterCenters(k, clutter) {
+      const sep = clutter.groupSeparation;
+      const jitter = clutter.centerJitter;
+
+      if (k === 1) {
+        return [{ x: 50 + randn(0, jitter * 0.22), y: 50 + randn(0, jitter * 0.22) }];
+      }
+
+      if (k === 3) {
+        return [
+          { x: 50 - sep, y: 50 - 0.5 * sep },
+          { x: 50, y: 50 + 0.55 * sep },
+          { x: 50 + sep, y: 50 - 0.35 * sep }
+        ].map(c => ({
+          x: c.x + randn(0, jitter * 0.18),
+          y: c.y + randn(0, jitter * 0.18)
+        }));
+      }
+
+      return [
+        { x: 50 - 1.2 * sep, y: 50 - 0.65 * sep },
+        { x: 50 - 0.45 * sep, y: 50 + 0.75 * sep },
+        { x: 50 + 0.1 * sep, y: 50 - 0.1 * sep },
+        { x: 50 + 0.7 * sep, y: 50 + 0.6 * sep },
+        { x: 50 + 1.35 * sep, y: 50 - 0.45 * sep }
+      ].map(c => ({
+        x: c.x + randn(0, jitter * 0.18),
+        y: c.y + randn(0, jitter * 0.18)
+      }));
+    }
+
+    function adjustTargetMean(data, targetGroup, targetMean) {
+      const targetPoints = data.filter(d => d.group === targetGroup);
+      if (!targetPoints.length) return;
+
+      for (let pass = 0; pass < 3; pass++) {
+        const currentMean = d3.mean(targetPoints, d => d.y);
+        const shift = targetMean - currentMean;
+        targetPoints.forEach(d => {
+          d.y = clamp(d.y + shift, 1, 99);
+        });
+      }
+    }
+
+    function makeExtremeCompetitive(data, targetGroup, extremeType, compression) {
+      if (compression <= 0) return;
+
+      const targetPoints = data.filter(d => d.group === targetGroup);
+      if (targetPoints.length < 4) return;
+
+      const sorted = targetPoints.slice().sort((a, b) =>
+        extremeType === "max" ? b.y - a.y : a.y - b.y
+      );
+
+      const leader = sorted[0];
+      const gapScale = 1.35 - compression * 0.8;
+      const gap1 = 1.15 * gapScale;
+      const gap2 = 2.1 * gapScale;
+      const gap3 = 3.2 * gapScale;
+
+      if (extremeType === "max") {
+        leader.y = clamp(leader.y + 0.9 + compression * 1.1, 1, 99);
+        sorted[1].y = clamp(leader.y - gap1, 1, 99);
+        sorted[2].y = clamp(leader.y - gap2, 1, 99);
+        sorted[3].y = clamp(leader.y - gap3, 1, 99);
+      } else {
+        leader.y = clamp(leader.y - (0.9 + compression * 1.1), 1, 99);
+        sorted[1].y = clamp(leader.y + gap1, 1, 99);
+        sorted[2].y = clamp(leader.y + gap2, 1, 99);
+        sorted[3].y = clamp(leader.y + gap3, 1, 99);
+      }
+    }
+
+    function injectFakeExtremeCompetitors(data, trial) {
+      if (trial.fakeExtremeCount <= 0 || trial.colorGroupCount === 1) return;
+
+      const targetPoints = data.filter(d => d.group === trial.targetGroup);
+      const others = data.filter(d => d.group !== trial.targetGroup);
+      if (!targetPoints.length || !others.length) return;
+
+      const targetExtreme = trial.extremeType === "max"
+        ? d3.max(targetPoints, d => d.y)
+        : d3.min(targetPoints, d => d.y);
+
+      const shuffledOthers = shuffle(others).slice(0, Math.min(trial.fakeExtremeCount, others.length));
+
+      shuffledOthers.forEach((d, i) => {
+        const xPull = 52 + randn(0, 6.5);
+        d.x = clamp((d.x * 0.35) + (xPull * 0.65), 3, 97);
+
+        if (trial.extremeType === "max") {
+          const offset = 0.3 + i * 0.32 + Math.random() * 0.75;
+          d.y = clamp(targetExtreme - offset, 1, 99);
+        } else {
+          const offset = 0.3 + i * 0.32 + Math.random() * 0.75;
+          d.y = clamp(targetExtreme + offset, 1, 99);
+        }
+      });
+    }
+
+    function ensureUniqueExtreme(data, targetGroup, extremeType) {
+      const targetPoints = data.filter(d => d.group === targetGroup);
+      if (targetPoints.length < 2) return;
+
+      const sorted = targetPoints.slice().sort((a, b) =>
+        extremeType === "max" ? b.y - a.y : a.y - b.y
+      );
+
+      const leader = sorted[0];
+      const runnerUp = sorted[1];
+      const minGap = 0.9;
+
+      if (extremeType === "max") {
+        if ((leader.y - runnerUp.y) < minGap) {
+          leader.y = clamp(runnerUp.y + minGap, 1, 99);
+        }
+      } else {
+        if ((runnerUp.y - leader.y) < minGap) {
+          leader.y = clamp(runnerUp.y - minGap, 1, 99);
+        }
+      }
+    }
+
+
+    function applySoftMinGap(data, trial) {
+      const minGap = (trial.dotRadius || 0) * (trial.minGapFactor || 0);
+      const passes = trial.minGapPasses || 0;
+      if (!minGap || passes <= 0 || data.length < 2) return;
+
+      const xPixelsPerUnit = (width - margin.left - margin.right) / 100;
+      const yPixelsPerUnit = (height - margin.top - margin.bottom) / 100;
+
+      for (let pass = 0; pass < passes; pass++) {
+        let movedAny = false;
+
+        for (let i = 0; i < data.length; i++) {
+          for (let j = i + 1; j < data.length; j++) {
+            const a = data[i];
+            const b = data[j];
+
+            const ax = xScale(a.x);
+            const ay = yScale(a.y);
+            const bx = xScale(b.x);
+            const by = yScale(b.y);
+
+            let dx = bx - ax;
+            let dy = by - ay;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 0.001) {
+              const theta = Math.random() * Math.PI * 2;
+              dx = Math.cos(theta);
+              dy = Math.sin(theta);
+              dist = 1;
+            }
+
+            let desiredGap = minGap;
+            if (a.group === trial.targetGroup && b.group === trial.targetGroup) {
+              desiredGap *= 1.08;
+            } else if (a.group === trial.targetGroup || b.group === trial.targetGroup) {
+              desiredGap *= 1.04;
+            }
+
+            if (dist >= desiredGap) continue;
+
+            const overlap = desiredGap - dist;
+            const ux = dx / dist;
+            const uy = dy / dist;
+            const shift = overlap * 0.5;
+            const shiftXData = (ux * shift) / xPixelsPerUnit;
+            const shiftYData = (-uy * shift) / yPixelsPerUnit;
+
+            a.x = clamp(a.x - shiftXData, 3, 97);
+            a.y = clamp(a.y - shiftYData, 1, 99);
+            b.x = clamp(b.x + shiftXData, 3, 97);
+            b.y = clamp(b.y + shiftYData, 1, 99);
+            movedAny = true;
+          }
+        }
+
+        if (!movedAny) break;
+      }
+    }
+
+
+    function buildTrialData(trial) {
+      const n = trial.pointCount;
+      const centers = buildClusterCenters(trial.colorGroupCount, trial);
+
+      const groupRotationOffsets = d3.range(trial.colorGroupCount).map(i => {
+        if (trial.colorGroupCount === 1) return 0;
+        const spread = trial.rotationDegrees * 0.75;
+        const t = i / Math.max(1, trial.colorGroupCount - 1);
+        return -spread + t * spread * 2;
+      });
+
+      const baseCount = Math.floor(n / trial.colorGroupCount);
+      const remainder = n % trial.colorGroupCount;
+      const groupCounts = d3.range(trial.colorGroupCount).map(i => baseCount + (i < remainder ? 1 : 0));
+
+      let raw = [];
+      d3.range(trial.colorGroupCount).forEach(group => {
+        const center = centers[group];
+        const patternType = group === trial.targetGroup ? trial.patternType : "gaussian";
+        let angle = trial.rotationDegrees + groupRotationOffsets[group] + randn(0, 6);
+        if (group === trial.targetGroup && patternType !== "gaussian") {
+          angle = angle * 0.18 + randn(0, 3);
+        }
+        const groupPoints = generateGroupPoints(
+          patternType,
+          groupCounts[group],
+          center,
+          angle,
+          trial,
+          group,
+          palette[group % palette.length]
+        );
+        raw = raw.concat(groupPoints);
+      });
+
+      adjustTargetMean(raw, trial.targetGroup, trial.targetMean);
+      makeExtremeCompetitive(raw, trial.targetGroup, trial.extremeType, trial.nearExtremeCompression);
+      injectFakeExtremeCompetitors(raw, trial);
+      ensureUniqueExtreme(raw, trial.targetGroup, trial.extremeType);
+      applySoftMinGap(raw, trial);
+      adjustTargetMean(raw, trial.targetGroup, trial.targetMean);
+      ensureUniqueExtreme(raw, trial.targetGroup, trial.extremeType);
+      applySoftMinGap(raw, trial);
+      adjustTargetMean(raw, trial.targetGroup, trial.targetMean);
+      ensureUniqueExtreme(raw, trial.targetGroup, trial.extremeType);
+
+      return raw;
+    }
+
+
+    function drawAxesAndGrid() {
+      svg.selectAll(".grid").remove();
+      svg.selectAll(".axis").remove();
+      svg.selectAll(".axis-label").remove();
+
+      const xTicks = d3.range(0, 101, 20);
+      const yTicks = d3.range(0, 101, 20);
+
+      svg.append("g")
+        .attr("class", "grid")
+        .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+        .call(
+          d3.axisBottom(xScale)
+            .tickValues(xTicks)
+            .tickSize(-(height - margin.top - margin.bottom))
+            .tickFormat("")
+        )
+        .call(g => g.selectAll("line")
+          .attr("stroke", "#dbe7f3")
+          .attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", "4,6"))
+        .call(g => g.select(".domain").remove());
+
+      svg.append("g")
+        .attr("class", "grid")
+        .attr("transform", "translate(" + margin.left + ",0)")
+        .call(
+          d3.axisLeft(yScale)
+            .tickValues(yTicks)
+            .tickSize(-(width - margin.left - margin.right))
+            .tickFormat("")
+        )
+        .call(g => g.selectAll("line")
+          .attr("stroke", "#dbe7f3")
+          .attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", "4,6"))
+        .call(g => g.select(".domain").remove());
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+        .call(d3.axisBottom(xScale).tickValues(xTicks).tickSizeOuter(0));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(" + margin.left + ",0)")
+        .call(d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0));
+
+      svg.selectAll(".axis line, .axis path")
+        .attr("stroke", "#475569")
+        .attr("stroke-width", 1.2);
+
+      svg.selectAll(".axis text")
+        .attr("fill", "#334155")
+        .style("font-size", "16px")
+        .style("font-weight", "600");
+
+      svg.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height - 20)
+        .attr("text-anchor", "middle")
+        .style("font-size", "32px")
+        .style("font-weight", "700")
+        .style("fill", "#111827")
+        .text("X");
+
+      svg.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", 28)
+        .attr("text-anchor", "middle")
+        .style("font-size", "32px")
+        .style("font-weight", "700")
+        .style("fill", "#111827")
+        .text("Y");
+    }
+
+    function clearEstimateOverlay() {
+      svg.selectAll(".selection-line, .selection-label, .selection-dot, .y-axis-hit").remove();
+    }
+
+    function drawEstimateOverlay(yPixel, yValue, mode = "hover") {
+      svg.selectAll(".selection-line, .selection-label, .selection-dot").remove();
+      const b = getPlotBounds();
+      const clippedY = clampToPlotY(yPixel);
+
+      svg.append("line")
+        .attr("class", "selection-line")
+        .attr("x1", b.x0)
+        .attr("x2", b.x1)
+        .attr("y1", clippedY)
+        .attr("y2", clippedY)
+        .attr("opacity", mode === "hover" ? 0.55 : 1);
+
+      svg.append("circle")
+        .attr("class", "selection-dot")
+        .attr("cx", b.x0)
+        .attr("cy", clippedY)
+        .attr("r", mode === "hover" ? 4.5 : 5.5)
+        .attr("opacity", mode === "hover" ? 0.75 : 1);
+    }
+
+    function updateEstimateReadout() {
+      const el = document.getElementById("clickEstimateValue");
+      if (el) el.textContent = formatEstimate(selectedEstimate);
+    }
+    function updateExtremeReadout(trial) {
+      const el = document.getElementById("pointPickValue");
+      if (!el) return;
+
+      if (!selectedPoint) {
+        el.textContent = "Not selected";
+        return;
+      }
+
+      const label = trial.extremeType === "max" ? "Highest" : "Lowest";
+      el.textContent = label + " selected";
+    }
+
+    function updateSubmitButtonState() {
+      const btn = document.getElementById("submitEstimateBtn");
+      if (!btn) return;
+      btn.disabled = !(selectedEstimate != null && selectedPoint != null);
+    }
+
+
+    function bindYAxisInteraction() {
+      const b = getPlotBounds();
+
+      svg.append("rect")
+        .attr("class", "y-axis-hit")
+        .attr("x", b.x0 - 26)
+        .attr("y", b.y0)
+        .attr("width", 36)
+        .attr("height", b.y1 - b.y0)
+        .on("mouseenter", function () {
+          d3.select(this).classed("active", true);
+        })
+        .on("mouseleave", function () {
+          d3.select(this).classed("active", false);
+          if (selectedEstimate == null) {
+            svg.selectAll(".selection-line, .selection-label, .selection-dot").remove();
+          } else {
+            drawEstimateOverlay(yScale(selectedEstimate), selectedEstimate, "selected");
+          }
+        })
+        .on("mousemove", function (event) {
+          const [, ySvg] = d3.pointer(event, svg.node());
+          const yValue = pixelToYValue(ySvg);
+          drawEstimateOverlay(ySvg, yValue, "hover");
+        })
+        .on("click", function (event) {
+          const [, ySvg] = d3.pointer(event, svg.node());
+          selectedEstimate = pixelToYValue(ySvg);
+          drawEstimateOverlay(ySvg, selectedEstimate, "selected");
+          updateEstimateReadout();
+          updateSubmitButtonState();
+        });
+    }
+
+
+    function updatePointSelectionVisual(trial) {
+      svg.selectAll(".point")
+        .attr("stroke", d => selectedPoint === d ? "#111827" : d.color)
+        .attr("stroke-opacity", d => selectedPoint === d ? 1 : 0.2)
+        .attr("stroke-width", d => selectedPoint === d ? 3 : 0.9)
+        .attr("fill-opacity", d => selectedPoint === d ? 1 : (trial.colorGroupCount === 1 ? 0.78 : 0.68));
+    }
+
+    function findNearestTargetPoint(mouseX, mouseY, data, targetGroup, maxDistance = 18) {
+      const targetPoints = data.filter(d => d.group === targetGroup);
+      let best = null;
+      let bestDist = Infinity;
+
+      for (const d of targetPoints) {
+        const px = xScale(d.x);
+        const py = yScale(d.y);
+        const dx = mouseX - px;
+        const dy = mouseY - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = d;
+        }
+      }
+
+      return bestDist <= maxDistance ? best : null;
+    }
+
+    function bindPointInteraction(trial, data) {
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+
+      svg.append("rect")
+        .attr("class", "plot-hit-layer")
+        .attr("x", margin.left)
+        .attr("y", margin.top)
+        .attr("width", plotWidth)
+        .attr("height", plotHeight)
+        .attr("fill", "transparent")
+        .style("cursor", "crosshair")
+        .on("click", function (event) {
+          const [mx, my] = d3.pointer(event, svg.node());
+          const picked = findNearestTargetPoint(mx, my, data, trial.targetGroup, Math.max(trial.dotRadius + 6, 16));
+          if (!picked) return;
+
+          selectedPoint = picked;
+          selectedPointIndex = data.indexOf(picked);
+          updatePointSelectionVisual(trial);
+          updateExtremeReadout(trial);
+          updateSubmitButtonState();
+        });
+    }
+
+    function getTrueExtremePoint(data, targetGroup, extremeType) {
+      const targetPoints = data.filter(d => d.group === targetGroup);
+
+      if (extremeType === "max") {
+        return targetPoints.reduce((a, b) => b.y > a.y ? b : a);
+      }
+      return targetPoints.reduce((a, b) => b.y < a.y ? b : a);
+    }
+
+    function renderScatter(data, trial) {
+      svg.selectAll("*").remove();
+      drawAxesAndGrid();
+
+      svg.selectAll(".point")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("class", "point")
+        .attr("cx", d => xScale(d.x))
+        .attr("cy", d => yScale(d.y))
+        .attr("r", trial.dotRadius)
+        .attr("fill", d => d.color)
+        .attr("fill-opacity", trial.colorGroupCount === 1 ? 0.78 : 0.68)
+        .attr("stroke", d => d.color)
+        .attr("stroke-opacity", 0.2)
+        .attr("stroke-width", 0.9);
+
+      bindYAxisInteraction();
+      bindPointInteraction(trial, data);
+    }
+
+    function renderRatingItems() {
+      const container = document.getElementById("ratingItems");
+      container.innerHTML = "";
+      ratingQuestions.forEach((q, idx) => {
+        const block = document.createElement("div");
+        block.className = "rating-block";
+
+        const prompt = document.createElement("div");
+        prompt.className = "rating-q";
+        prompt.textContent = (idx + 1) + ". " + q.text;
+        block.appendChild(prompt);
+
+        const options = document.createElement("div");
+        options.className = "rating-options";
+
+        for (let i = 1; i <= 7; i++) {
+          const option = document.createElement("label");
+          option.innerHTML = '<input type="radio" name="' + q.id + '" value="' + i + '"><span>' + i + '</span>';
+          options.appendChild(option);
+        }
+
+        block.appendChild(options);
+        container.appendChild(block);
+      });
+    }
+
+    function resetRatingUI() {
+      ratingQuestions.forEach(q => {
+        document.querySelectorAll('input[name="' + q.id + '"]').forEach(el => {
+          el.checked = false;
+        });
+      });
+      document.getElementById("ratingStatus").textContent = "Answer all items, then continue.";
+      document.getElementById("submitRatingBtn").disabled = false;
+    }
+
+
+    function makeTrialList() {
+      const trials = [];
+      const shuffledLevels = shuffle(design.clutterLevels);
+
+      shuffledLevels.forEach((clutter, displayBlockIdx) => {
+        const extremeTypes = shuffle(["max", "max", "max", "max", "min", "min", "min", "min"]);
+
+        for (let i = 0; i < design.trialsPerBlock; i++) {
+          const extremeType = extremeTypes[i];
+          const trial = {
+            blockIndex: displayBlockIdx + 1,
+            originalLevel: clutter.level || (design.clutterLevels.findIndex(d => d.name === clutter.name) + 1),
+            trialWithinBlock: i + 1,
+            clutterName: clutter.name,
+            clutterLabel: clutter.label,
+            pointCount: clutter.pointCount,
+            dotRadius: clutter.dotRadius,
+            rotationDegrees: clutter.rotationDegrees,
+            centerJitter: clutter.centerJitter,
+            clusterSpreadX: clutter.clusterSpreadX,
+            clusterSpreadY: clutter.clusterSpreadY,
+            groupSeparation: clutter.groupSeparation,
+            fakeExtremeCount: Math.max(0, clutter.colorGroupCount - 1),
+            nearExtremeCompression: clutter.nearExtremeCompression,
+            minGapFactor: clutter.minGapFactor,
+            minGapPasses: clutter.minGapPasses,
+            colorGroupCount: clutter.colorGroupCount,
+            extremeType,
+            patternType: choosePatternType(clutter)
+          };
+          trials.push({
+            ...trial,
+            trialNumber: trials.length + 1,
+            targetMean: sampleTargetMean(),
+            targetGroup: getTargetGroup(trial)
+          });
+        }
+      });
+
+      return trials;
+    }
+
+
+    function updateProgress() {
+      const trial = trialList[trialIndex];
+      const groupText = "Group " + trial.blockIndex + " of " + design.clutterLevels.length;
+      const plotText = "Plot " + trial.trialWithinBlock + " of " + design.trialsPerBlock;
+      document.getElementById("progressText").textContent = groupText + " · " + plotText;
+      document.getElementById("ratingProgressText").textContent = groupText + " complete";
+    }
+
+
+    function updateTrialMeta(trial) {
+      const meta = document.getElementById("trialMeta");
+      if (meta) meta.innerHTML = "";
+    }
+
+
+    function resetEstimateSelection() {
+      selectedEstimate = null;
+      selectedPoint = null;
+      selectedPointIndex = null;
+      updateEstimateReadout();
+      const pointEl = document.getElementById("pointPickValue");
+      if (pointEl) pointEl.textContent = "Not selected";
+      clearEstimateOverlay();
+      updateSubmitButtonState();
+    }
+
+    function startTrial() {
+      if (trialIndex >= trialList.length) {
+        finishTest();
+        return;
+      }
+
+      updateProgress();
+      resetEstimateSelection();
+
+      const trial = trialList[trialIndex];
+      updateTrialMeta(trial);
+      updateTrialPrompt(trial);
+      currentData = buildTrialData(trial);
+
+      renderScatter(currentData, trial);
+      trialStartTime = performance.now();
+      pendingEstimateResult = null;
+      showScreen("trialScreen");
+    }
+
+    function showBlockRatingScreen() {
+      const trial = trialList[trialIndex];
+      resetRatingUI();
+      document.getElementById("ratingProgressText").textContent =
+        "Group " + trial.blockIndex + " of " + design.clutterLevels.length + " complete";
+      document.querySelector("#ratingScreen h2").textContent =
+        "Group " + trial.clutterLabel + " Readability Rating";
+      const ratingLead = document.querySelector("#ratingScreen p");
+      if (ratingLead) {
+        ratingLead.textContent =
+          "Please rate the previous set of 5 plots from 1 (strongly disagree) to 7 (strongly agree).";
+      }
+      showScreen("ratingScreen");
+    }
+
+    function submitEstimate() {
+      if (selectedEstimate == null || selectedPoint == null) return;
+
+      const trial = trialList[trialIndex];
+      const reactionTime = (performance.now() - trialStartTime) / 1000;
+
+      const estimate = +selectedEstimate.toFixed(2);
+      const trueMean = getTrueMeanForTarget(currentData, trial.targetGroup);
+      const meanAbsError = Math.abs(estimate - trueMean);
+
+      const trueExtremePoint = getTrueExtremePoint(currentData, trial.targetGroup, trial.extremeType);
+
+      const xError = Math.abs(selectedPoint.x - trueExtremePoint.x);
+      const yError = Math.abs(selectedPoint.y - trueExtremePoint.y);
+      const euclideanError = Math.sqrt(xError * xError + yError * yError);
+      const extremeCorrect = selectedPoint === trueExtremePoint ? 1 : 0;
+
+      pendingEstimateResult = {
+        trialIndex: trialIndex + 1,
+        blockIndex: trial.blockIndex,
+        trialWithinBlock: trial.trialWithinBlock,
+        pointCount: trial.pointCount,
+        dotRadius: trial.dotRadius,
+        rotationDegrees: trial.rotationDegrees,
+        clutterName: trial.clutterName,
+        clutterLabel: trial.clutterLabel,
+        patternType: trial.patternType,
+        colorGroupCount: trial.colorGroupCount,
+        targetGroup: trial.targetGroup,
+        targetGroupName: colorNames[trial.targetGroup],
+        targetMeanY: trial.targetMean,
+
+        meanEstimate: estimate,
+        trueMeanY: +trueMean.toFixed(2),
+        meanAbsError: +meanAbsError.toFixed(2),
+
+        extremeType: trial.extremeType,
+        selectedPointIndex,
+        selectedX: +selectedPoint.x.toFixed(2),
+        selectedY: +selectedPoint.y.toFixed(2),
+        trueExtremeX: +trueExtremePoint.x.toFixed(2),
+        trueExtremeY: +trueExtremePoint.y.toFixed(2),
+        extremeCorrect,
+        xError: +xError.toFixed(2),
+        yError: +yError.toFixed(2),
+        euclideanError: +euclideanError.toFixed(2),
+
+        reactionTime: +reactionTime.toFixed(3)
+      };
+
+      results.push(pendingEstimateResult);
+      pendingEstimateResult = null;
+      document.getElementById("submitEstimateBtn").disabled = true;
+
+      const finishedBlock = trial.trialWithinBlock === design.trialsPerBlock;
+      if (finishedBlock) {
+        showBlockRatingScreen();
+      } else {
+        trialIndex += 1;
+        startTrial();
+      }
+    }
+
+    function submitRating() {
+      const ratings = {};
+      for (const q of ratingQuestions) {
+        const selected = document.querySelector('input[name="' + q.id + '"]:checked');
+        if (!selected) {
+          document.getElementById("ratingStatus").textContent = "Please answer all items before continuing.";
+          return;
+        }
+        ratings[q.id] = +selected.value;
+      }
+
+      const trial = trialList[trialIndex];
+      const blockRating = {
+        blockIndex: trial.blockIndex,
+        clutterName: trial.clutterName,
+        clutterLabel: trial.clutterLabel,
+        colorGroupCount: trial.colorGroupCount,
+        find: ratings.find,
+        identify: ratings.identify,
+        inform: ratings.inform,
+        visible: ratings.visible,
+        clear: ratings.clear,
+        dataReadScore: +(((ratings.find + ratings.identify + ratings.inform) / 3).toFixed(2)),
+        dataFeatScore: +(((ratings.visible + ratings.clear) / 2).toFixed(2))
+      };
+      blockRatings.push(blockRating);
+
+      results.forEach(r => {
+        if (r.blockIndex === blockRating.blockIndex) {
+          r.ratings = {
+            find: blockRating.find,
+            identify: blockRating.identify,
+            inform: blockRating.inform,
+            visible: blockRating.visible,
+            clear: blockRating.clear
+          };
+          r.dataReadScore = blockRating.dataReadScore;
+          r.dataFeatScore = blockRating.dataFeatScore;
+        }
+      });
+
+      trialIndex += 1;
+      startTrial();
+    }
+
+    function toCSV(rows) {
+      if (!rows.length) return "";
+      const flattened = rows.map(r => ({
+        trialIndex: r.trialIndex,
+        pointCount: r.pointCount,
+        dotRadius: r.dotRadius,
+        rotationDegrees: r.rotationDegrees,
+        clutterName: r.clutterName,
+        clutterLabel: r.clutterLabel,
+        patternType: r.patternType,
+        colorGroupCount: r.colorGroupCount,
+        targetGroup: r.targetGroup,
+        targetGroupName: r.targetGroupName,
+        targetMeanY: r.targetMeanY,
+        meanEstimate: r.meanEstimate,
+        trueMeanY: r.trueMeanY,
+        meanAbsError: r.meanAbsError,
+        extremeType: r.extremeType,
+        selectedPointIndex: r.selectedPointIndex,
+        selectedX: r.selectedX,
+        selectedY: r.selectedY,
+        trueExtremeX: r.trueExtremeX,
+        trueExtremeY: r.trueExtremeY,
+        extremeCorrect: r.extremeCorrect,
+        xError: r.xError,
+        yError: r.yError,
+        euclideanError: r.euclideanError,
+        reactionTime: r.reactionTime,
+        find: r.ratings.find,
+        identify: r.ratings.identify,
+        inform: r.ratings.inform,
+        visible: r.ratings.visible,
+        clear: r.ratings.clear,
+        dataReadScore: r.dataReadScore,
+        dataFeatScore: r.dataFeatScore
+      }));
+
+      const headers = Object.keys(flattened[0]);
+      const lines = [headers.join(",")];
+      flattened.forEach(row => {
+        lines.push(headers.map(h => JSON.stringify(row[h] ?? "")).join(","));
+      });
+      return lines.join("\n");
+    }
+
+    async function finishTest() {
+      const preview = {
+        nBlocks: blockRatings.length,
+        nTrials: results.length,
+        meanAbsError: +(d3.mean(results, d => d.meanAbsError) || 0).toFixed(2),
+        meanRT: +(d3.mean(results, d => d.reactionTime) || 0).toFixed(3),
+        meanExtremeAccuracy: +(d3.mean(results, d => d.extremeCorrect) || 0).toFixed(2),
+        meanDataRead: +(d3.mean(blockRatings, d => d.dataReadScore) || 0).toFixed(2),
+        meanDataFeat: +(d3.mean(blockRatings, d => d.dataFeatScore) || 0).toFixed(2),
+        blockRatings,
+        sampleRows: results.slice(0, 3)
+      };
+      document.getElementById("resultsPreview").textContent = JSON.stringify(preview, null, 2);
+      showScreen("endScreen");
+      if (CONFIG.AUTO_UPLOAD_AT_END) {
+        await uploadResultsToGoogleSheets();
+      } else {
+        setUploadStatus("ready — click upload manually if you add one.");
+      }
+    }
+
+    function downloadCSV() {
+      const csv = toCSV(results);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "scatterplot_block_previs_results.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("beginBtn").addEventListener("click", () => {
+      participantId = generateParticipantId();
+
+      results = [];
+      blockRatings = [];
+      uploadCompleted = false;
+      trialIndex = 0;
+      trialList = makeTrialList();
+      startTrial();
+    });
+
+    document.getElementById("submitEstimateBtn").addEventListener("click", submitEstimate);
+    document.getElementById("submitRatingBtn").addEventListener("click", submitRating);
+    document.getElementById("downloadBtn").addEventListener("click", downloadCSV);
+    document.getElementById("restartBtn").addEventListener("click", () => {
+      results = [];
+      blockRatings = [];
+      trialIndex = 0;
+      trialList = [];
+      selectedEstimate = null;
+      uploadCompleted = false;
+      document.getElementById("trialMeta").innerHTML = "";
+      updateEstimateReadout();
+      clearEstimateOverlay();
+      setUploadStatus("not started.");
+      showScreen("introScreen");
+    });
+
+    renderRatingItems();
+    updateEstimateReadout();
+  </script>
 </body>
 
 </html>
